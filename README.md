@@ -1,13 +1,13 @@
 # The Mandarin Room — Vocabulary Library
 
-A lightweight, teacher-editable library of Mandarin vocabulary sets, with a deliberately focused flashcard student viewer. Version 0.3 adds cross-device Teacher Voice Cloud while keeping vocabulary authoring browser-local.
+A lightweight, teacher-editable library of Mandarin vocabulary sets, with a deliberately focused flashcard student viewer. Version 0.4 adds cross-device cloud synchronisation for vocabulary sets while preserving Teacher Voice Cloud.
 
 ## Run locally
 
 Because the JavaScript uses browser modules, serve the repository rather than opening the HTML file directly:
 
 ```sh
-cd vocabulary
+cd "The Mandarin Room"
 python3 -m http.server 8000
 ```
 
@@ -15,7 +15,7 @@ Open `http://localhost:8000`. The project uses only plain HTML, CSS and JavaScri
 
 ## Vocabulary data
 
-Seed sets live in `js/vocabulary-data.js`, separate from the interface. Teacher edits are saved by `js/vocabulary-store.js` in the current browser's `localStorage` under `mandarin-room-vocabulary-v2`. Each set has a stable `id`, year level, English and Chinese titles, description, and an `items` array. Generic language items support words, phrases or sentences; Chinese, lowercase no-tone Pinyin, English, optional image and notes, independent AI/teacher audio settings, and reserved handwriting data.
+Seed sets live in `js/vocabulary-data.js`, separate from the interface. Published teacher edits are stored in Firestore under `vocabularySets/{setId}` and update Home and Student View in real time across devices. The previous browser-local data under `mandarin-room-vocabulary-v2` remains as a migration and offline fallback so an existing Mac set can be published by opening it and choosing **Save**. Each set has a stable `id`, year level, English and Chinese titles, description, and an `items` array. Generic language items support words, phrases or sentences; Chinese, lowercase no-tone Pinyin, English, optional image and notes, independent AI/teacher audio settings, and reserved handwriting data.
 
 ```js
 {
@@ -28,7 +28,7 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Teacher 
 }
 ```
 
-`getSet(id)` is the lookup helper used by the UI. The store boundary is deliberately small so a future Firebase repository can replace localStorage without embedding persistence in components.
+`getSet(id)` and `getSets()` load cloud documents first and overlay them on local/seed fallback data. `watchSet(id)` and `watchSets()` provide live updates. Authorised saves write Firestore first, then update the current browser cache. Stable set and item IDs are not regenerated, so existing Teacher Voice documents remain linked.
 
 ## Add a vocabulary set
 
@@ -70,7 +70,7 @@ AI Voice is isolated in `js/audio.js` and currently uses browser speech synthesi
 
 ## Current limitations and future work
 
-- Vocabulary text edits remain local to one browser/profile and are not synchronised or backed up. Teacher Voice metadata/audio is cloud-backed and cross-device.
+- Existing browser-local edits must be opened and saved once by an authorised teacher to publish them to Firestore.
 - Microphone recording requires HTTPS or localhost and explicit browser permission. Older iPads must support `MediaRecorder`; playback has broader compatibility than recording.
 - Teacher uploads require an authorised Google teacher account. Student playback is public for a known stable set/item ID and collects no student data.
 - Browser AI voices and pronunciation quality vary by device.
@@ -78,4 +78,4 @@ AI Voice is isolated in `js/audio.js` and currently uses browser speech synthesi
 - Handwriting fields are reserved but stroke animation is not implemented.
 - Planned capabilities: handwriting/stroke animation, Random Picker, Listening, Bingo, Sentence Builder, and shared Vocabulary consumption from Speaking.
 
-The directory can be published as the standalone GitHub Pages project at `https://themandarinroom.github.io/vocabulary/`.
+The repository root can be published as the standalone GitHub Pages project at `https://themandarinroom.github.io/vocabularylibrary/`.

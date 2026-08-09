@@ -1,11 +1,11 @@
-import { getSets, getSet } from "./vocabulary-store.js";
+import { getSets, getSet, watchSets } from "./vocabulary-store.js";
 import { canUseAiVoice, speakMandarin, playTeacherVoice } from "./audio.js";
 import { cacheSafeAudioUrl, watchTeacherVoice } from "./teacher-voice-cloud.js";
-import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=auth-diagnostics-2";
+import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
 
 const app = document.querySelector("#app");
 const grid = document.querySelector("#set-grid");
-const vocabularySets = getSets();
+let vocabularySets = await getSets();
 let activeYear = "all";
 
 initialiseTeacherVoiceAuth(() => "");
@@ -81,11 +81,12 @@ function renderSet(set) {
 }
 
 const requestedId = setIdFromUrl();
-const requestedSet = requestedId ? getSet(requestedId) : null;
+const requestedSet = requestedId ? await getSet(requestedId) : null;
 if (requestedId && !requestedSet) {
   app.innerHTML = `<section class="empty-state"><p class="eyebrow">Set not found</p><h1>That vocabulary set is not available.</h1><a class="button primary" href="./">Return to the library</a></section>`;
 } else if (requestedSet) {
   renderSet(requestedSet);
 } else {
   renderDashboard();
+  watchSets((sets) => { vocabularySets = sets; renderDashboard(); }, (error) => console.error("[Vocabulary Cloud Sync]", error)).then((unsubscribe) => window.addEventListener("beforeunload", unsubscribe, { once: true })).catch((error) => console.error("[Vocabulary Cloud Sync]", error));
 }

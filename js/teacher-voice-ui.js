@@ -37,7 +37,7 @@ export async function initialiseTeacherVoiceAuth(setIdGetter) {
       currentUser = user; authorised = false;
       if (user) { try { const snapshot = await services.firestoreSdk.getDoc(services.firestoreSdk.doc(services.db, "authorizedTeachers", user.uid)); authorised = snapshot.exists() && snapshot.data().active === true; } catch (error) { console.error(error); } }
       authReady = true;
-      state.textContent = !user ? "Sign in to save Teacher Voice recordings." : authorised ? `Signed in as ${user.email || user.displayName}` : "This account is not authorised to publish Teacher Voice.";
+      state.textContent = !user ? "Sign in to save vocabulary and Teacher Voice." : authorised ? `Signed in as ${user.email || user.displayName}` : "This account is not authorised to publish vocabulary or Teacher Voice.";
       state.classList.remove("developer-error");
       signIn.hidden = Boolean(user); signOut.hidden = !user;
       renderAllVoiceControls();

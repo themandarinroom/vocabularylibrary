@@ -1,5 +1,5 @@
 import { getSet, saveSet, deleteSet } from "./vocabulary-store.js";
-import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=auth-diagnostics-2";
+import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
 
 const suggestions = {
   "中国": ["zhong guo", "China"], "美国": ["mei guo", "United States"], "英国": ["ying guo", "United Kingdom"], "日本": ["ri ben", "Japan"], "加拿大": ["jia na da", "Canada"], "澳大利亚": ["ao da li ya", "Australia"],
@@ -7,7 +7,7 @@ const suggestions = {
 };
 const params = new URLSearchParams(location.search);
 const originalId = params.get("set");
-const existing = originalId ? getSet(originalId) : null;
+const existing = originalId ? await getSet(originalId) : null;
 let items = existing ? JSON.parse(JSON.stringify(existing.items)) : [];
 const preservedDescription = existing?.description || "";
 const $ = (selector) => document.querySelector(selector);
@@ -35,7 +35,7 @@ function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) =>
 function move(index, change) { const target = index + change; if (target < 0 || target >= items.length) return; [items[index], items[target]] = [items[target], items[index]]; renderItems(); }
 $("#add-item").onclick = () => { items.push(newItem()); renderItems(); };
 $("#import-items").onclick = () => { const lines = $("#bulk-input").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean); lines.forEach((line) => { const parts = line.split("|").map((part) => part.trim()); const chinese = parts[0] || ""; const local = suggestions[chinese] || ["", ""]; const pinyin = parts.length >= 3 ? parts[1] : local[0]; const english = parts.length >= 3 ? parts.slice(2).join(" | ") : parts.length === 2 ? parts[1] : local[1]; items.push(newItem(chinese, pinyin.toLowerCase(), english)); }); $("#bulk-input").value = ""; renderItems(); $("#form-status").textContent = `${lines.length} item${lines.length === 1 ? "" : "s"} created. Review and save when ready.`; };
-$("#set-form").onsubmit = (event) => { event.preventDefault(); document.querySelectorAll(".item-editor").forEach(updateFromRow); if (!existing && !$("#set-id").value.trim()) $("#set-id").value = generatedSetId(); const set = { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, items }; try { saveSet(set, originalId); location.href = `./?set=${encodeURIComponent(set.id)}`; } catch (error) { $("#form-status").textContent = error.message; } };
-$("#delete-set").onclick = () => { if (confirm(`Delete “${existing.title}”? This only affects this browser.`)) { deleteSet(originalId); location.href = "./"; } };
+$("#set-form").onsubmit = async (event) => { event.preventDefault(); document.querySelectorAll(".item-editor").forEach(updateFromRow); if (!existing && !$("#set-id").value.trim()) $("#set-id").value = generatedSetId(); const set = { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, items }; const saveButton = $("#set-form button[type=submit]"); saveButton.disabled = true; $("#form-status").textContent = "Saving to cloud…"; try { await saveSet(set, originalId); location.href = `./?set=${encodeURIComponent(set.id)}`; } catch (error) { $("#form-status").textContent = error.message; saveButton.disabled = false; } };
+$("#delete-set").onclick = async () => { if (confirm(`Delete “${existing.title}” from every device?`)) { try { await deleteSet(originalId); location.href = "./"; } catch (error) { $("#form-status").textContent = error.message; } } };
 initialiseTeacherVoiceAuth(() => $("#set-id").value.trim());
 renderItems();

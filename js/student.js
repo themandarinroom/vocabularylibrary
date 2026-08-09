@@ -1,14 +1,15 @@
-import { getSet } from "./vocabulary-store.js";
+import { getSet, watchSet } from "./vocabulary-store.js";
 import { canUseAiVoice, speakMandarin, playTeacherVoice } from "./audio.js";
 import { cacheSafeAudioUrl, watchTeacherVoice } from "./teacher-voice-cloud.js";
 
 const params = new URLSearchParams(location.search);
-const set = getSet(params.get("set"));
+let set = await getSet(params.get("set"));
 let currentIndex = Math.max(0, parseInt(params.get("item") || "1", 10) - 1);
 let showPinyin = localStorage.getItem("mandarin-room-show-pinyin") !== "false";
 let revealed = false;
 let teacherVoiceUrl = "";
 let unsubscribeTeacherVoice = null;
+let unsubscribeSet = null;
 let voiceRequest = 0;
 let audioStatusVersion = 0;
 const $ = (selector) => document.querySelector(selector);
@@ -85,5 +86,6 @@ if (!set) {
   };
   document.addEventListener("keydown", (event) => { if (event.key === "ArrowLeft") navigate(-1); if (event.key === "ArrowRight") navigate(1); if (event.key === " " || event.key === "Enter") { if (event.target === document.body) { event.preventDefault(); $("#flashcard").click(); } } });
   render();
-  window.addEventListener("beforeunload", () => unsubscribeTeacherVoice?.());
+  watchSet(set.id, (cloudSet) => { if (!cloudSet) { location.href = "./"; return; } set = cloudSet; currentIndex = Math.min(currentIndex, set.items.length - 1); $("#set-label").textContent = `${set.title} · ${set.chineseTitle}`; render(); }, (error) => console.error("[Vocabulary Cloud Sync]", error)).then((unsubscribe) => { unsubscribeSet = unsubscribe; }).catch((error) => console.error("[Vocabulary Cloud Sync]", error));
+  window.addEventListener("beforeunload", () => { unsubscribeTeacherVoice?.(); unsubscribeSet?.(); });
 }
