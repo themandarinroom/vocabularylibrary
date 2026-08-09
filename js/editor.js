@@ -1,4 +1,4 @@
-import { getSet, saveSet, deleteSet } from "./vocabulary-store.js";
+import { getSet, saveSet, deleteSet } from "./vocabulary-store.js?v=cloud-sync-1";
 import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
 
 const suggestions = {

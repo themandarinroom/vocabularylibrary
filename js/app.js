@@ -1,4 +1,4 @@
-import { getSets, getSet, watchSets } from "./vocabulary-store.js";
+import { getSets, getSet, watchSets } from "./vocabulary-store.js?v=cloud-sync-1";
 import { canUseAiVoice, speakMandarin, playTeacherVoice } from "./audio.js";
 import { cacheSafeAudioUrl, watchTeacherVoice } from "./teacher-voice-cloud.js";
 import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
