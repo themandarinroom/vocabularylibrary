@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f3e9"><title>Edit Set · Vocabulary Library</title><link rel="stylesheet" href="css/styles.css?v=compact-set-details-1"></head>
+<body><header class="site-header editor-site-header"><a class="brand" href="./"><span class="brand-mark">字</span><span><strong>The Mandarin Room</strong><small>Vocabulary Library</small></span></a><section class="voice-auth-panel"><div><strong id="voice-auth-state">Connecting Teacher Voice Cloud…</strong><p>Only authorised teachers can upload or delete recordings.</p></div><div><button id="voice-sign-in" class="button secondary" type="button">Sign in with Google</button><button id="voice-sign-out" class="button secondary" type="button" hidden>Sign out</button></div></section></header>
+<main class="editor-main"><a class="quiet-link" href="./">← Vocabulary Library</a><form id="set-form">
+  <div class="editor-heading"><div><p class="eyebrow">Teacher authoring</p><h1 id="editor-title">New vocabulary set</h1></div><div class="editor-actions"><button class="button primary" type="submit">Save set</button><button id="delete-set" class="button danger" type="button" hidden>Delete set</button></div></div>
+  <p id="form-status" class="form-status" role="status"></p>
+  <section class="form-panel set-details-panel"><h2>Set details</h2><div class="form-grid set-details-grid">
+    <label>Year level<select id="year-level" required><option value="0">Prep</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select></label>
+    <label>English title<input id="title" required></label>
+    <label>Chinese title<input id="chinese-title" lang="zh-Hans"></label>
+  </div><details class="optional-editor set-details-advanced"><summary>Advanced</summary><div class="optional-editor-body"><label>Stable ID<input id="set-id" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="year5-countries"><small>Generated automatically for new sets. Existing IDs remain unchanged.</small></label></div></details></section>
+  <section class="form-panel vocabulary-items-panel"><div class="panel-heading"><div><p class="eyebrow">Fast authoring</p><h2>Vocabulary items</h2></div></div>
+    <section class="quick-paste-panel"><div class="quick-paste-copy"><h3>⚡ Quick Paste</h3><p>One item per line: Chinese, <code>Chinese | English</code>, or <code>Chinese | pinyin | English</code>.</p></div><textarea id="bulk-input" rows="4" aria-label="Quick Paste vocabulary" placeholder="中国 | zhong guo | China&#10;美国 | mei guo | United States"></textarea><button id="import-items" class="button primary" type="button">Create Items</button></section>
+    <div class="compact-column-headings" aria-hidden="true"><span>#</span><span>Chinese</span><span>Pinyin</span><span>English</span><span>Teacher Voice</span><span></span></div>
+    <div id="items" class="item-editor-list"></div>
+    <button id="add-item" class="button secondary compact-add-item" type="button">+ Add item</button>
+  </section>
+</form></main><footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Vocabulary v0.3 · Aug 2026</span></footer><script type="module" src="js/editor.js?v=compact-set-details-1"></script></body></html>

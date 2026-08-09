@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f3e9">
+  <title>Vocabulary Library · The Mandarin Room</title>
+  <link rel="stylesheet" href="css/styles.css?v=card-title-position-1">
+</head>
+<body>
+  <header class="site-header editor-site-header">
+    <a class="brand" href="./" aria-label="Vocabulary Library home">
+      <span class="brand-mark" aria-hidden="true">字</span>
+      <span><strong>The Mandarin Room</strong><small>Vocabulary Library</small></span>
+    </a>
+    <section class="voice-auth-panel home-auth-panel" aria-label="Teacher account">
+      <strong id="voice-auth-state">Connecting…</strong>
+      <div>
+        <button id="voice-sign-in" class="button secondary" type="button">Sign in</button>
+        <button id="voice-sign-out" class="button secondary" type="button" hidden>Sign out</button>
+      </div>
+    </section>
+  </header>
+
+  <main id="app" tabindex="-1">
+    <section aria-labelledby="sets-heading">
+      <div class="library-heading">
+        <h1 id="sets-heading">Your vocabulary sets</h1>
+        <a class="button primary" href="editor.html">+ New set</a>
+      </div>
+      <div class="library-controls">
+        <nav id="year-filters" class="filter-row" aria-label="Filter by year level"></nav>
+        <p id="set-summary" class="muted"></p>
+      </div>
+      <div id="set-grid" class="set-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>App created by Wei Wang</span>
+    <span>The Mandarin Room © 2026</span>
+    <span>Vocabulary v0.3 · Aug 2026</span>
+  </footer>
+  <script type="module" src="js/app.js?v=cards-no-description-1"></script>
+</body>
+</html>

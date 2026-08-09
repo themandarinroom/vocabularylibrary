@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function validYearLevel(yearLevelId) { return yearLevelId in ['prep', 'year-1', 'year-2', 'year-3', 'year-4', 'year-5', 'year-6']; }
+    function validPractice(practiceId) { return practiceId in ['core', 'challenge']; }
+    function validStableId(value) { return value.matches('[a-z0-9]+(-[a-z0-9]+)*'); }
+    function isAuthorisedTeacher() { return request.auth != null && request.auth.token.email_verified == true && firestore.get(/databases/(default)/documents/authorizedTeachers/$(request.auth.uid)).data.active == true; }
+    match /teacher-recordings/{yearLevelId}/{practiceId}/latest { allow read: if validYearLevel(yearLevelId) && validPractice(practiceId); allow create, update: if validYearLevel(yearLevelId) && validPractice(practiceId) && isAuthorisedTeacher() && request.resource.size < 20 * 1024 * 1024 && request.resource.contentType.matches('audio/.*'); allow delete: if validYearLevel(yearLevelId) && validPractice(practiceId) && isAuthorisedTeacher(); }
+    match /vocabulary/{setId}/{itemId}/{fileName} { allow read: if validStableId(setId) && validStableId(itemId) && fileName.matches('teacher-voice-[0-9]+'); allow create, update: if validStableId(setId) && validStableId(itemId) && fileName.matches('teacher-voice-[0-9]+') && isAuthorisedTeacher() && request.resource.size < 20 * 1024 * 1024 && request.resource.contentType.matches('audio/.*'); allow delete: if validStableId(setId) && validStableId(itemId) && fileName.matches('teacher-voice-[0-9]+') && isAuthorisedTeacher(); }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}
