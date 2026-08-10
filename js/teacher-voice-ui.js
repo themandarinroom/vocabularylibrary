@@ -15,7 +15,7 @@ const stateFor = (itemId) => {
 const rootFor = (itemId) => [...document.querySelectorAll("[data-teacher-voice]")].find((root) => root.dataset.teacherVoice === itemId) || null;
 const safeMessage = (error, fallback) => { console.error("[Vocabulary Teacher Voice]", error); return fallback; };
 
-export async function initialiseTeacherVoiceAuth(setIdGetter) {
+export async function initialiseTeacherVoiceAuth(setIdGetter, onAuthChange = () => {}) {
   getSetId = setIdGetter;
   const signIn = document.querySelector("#voice-sign-in");
   const signOut = document.querySelector("#voice-sign-out");
@@ -40,9 +40,10 @@ export async function initialiseTeacherVoiceAuth(setIdGetter) {
       state.textContent = !user ? "Sign in to save vocabulary and Teacher Voice." : authorised ? `Signed in as ${user.email || user.displayName}` : "This account is not authorised to publish vocabulary or Teacher Voice.";
       state.classList.remove("developer-error");
       signIn.hidden = Boolean(user); signOut.hidden = !user;
+      onAuthChange({ user, authorised });
       renderAllVoiceControls();
     });
-  } catch (error) { authReady = true; state.textContent = safeMessage(error, "Teacher Voice Cloud could not connect."); }
+  } catch (error) { authReady = true; state.textContent = safeMessage(error, "Teacher Voice Cloud could not connect."); onAuthChange({ user: null, authorised: false }); }
 }
 
 export function bindTeacherVoiceControls() {

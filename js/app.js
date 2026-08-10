@@ -1,14 +1,15 @@
 import { getSets, getSet, watchSets } from "./vocabulary-store.js?v=cloud-sync-1";
 import { canUseAiVoice, speakMandarin, playTeacherVoice } from "./audio.js";
 import { cacheSafeAudioUrl, watchTeacherVoice } from "./teacher-voice-cloud.js";
-import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
+import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=teacher-login-cards-1";
 
 const app = document.querySelector("#app");
 const grid = document.querySelector("#set-grid");
 let vocabularySets = await getSets();
 let activeYear = "all";
+let teacherLoggedIn = false;
 
-initialiseTeacherVoiceAuth(() => "");
+initialiseTeacherVoiceAuth(() => "", ({ user }) => { teacherLoggedIn = Boolean(user); if (document.querySelector("#set-grid")?.isConnected) renderDashboard(); });
 
 function setIdFromUrl() {
   return new URLSearchParams(window.location.search).get("set");
@@ -26,10 +27,11 @@ function renderDashboard() {
     <article class="set-card year-${set.yearLevel}">
       <div class="card-topline"><span class="year-badge">${yearLabel(set.yearLevel)}</span><span>${set.items.length} items</span></div>
       <div><p class="card-chinese" lang="zh-Hans">${set.chineseTitle}</p><h3>${set.title}</h3></div>
-      <div class="card-actions"><a class="button secondary set-action" href="editor.html?set=${encodeURIComponent(set.id)}">Edit</a><a class="button primary set-action" href="student.html?set=${encodeURIComponent(set.id)}">Student View</a></div>
+      <div class="card-actions">${teacherLoggedIn ? `<a class="button secondary set-action" href="editor.html?set=${encodeURIComponent(set.id)}">Edit</a>` : `<button class="button secondary set-action teacher-login-action" type="button">Teacher Login</button>`}<a class="button primary set-action" href="student.html?set=${encodeURIComponent(set.id)}">Student View</a></div>
     </article>`).join("");
   if (!shown.length) grid.innerHTML = `<p class="empty-message">No sets for this year yet.</p>`;
   filters.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => { activeYear = button.dataset.year === "all" ? "all" : Number(button.dataset.year); renderDashboard(); }));
+  grid.querySelectorAll(".teacher-login-action").forEach((button) => button.addEventListener("click", () => document.querySelector("#voice-sign-in")?.click()));
 }
 
 function itemRow(item, index) {
