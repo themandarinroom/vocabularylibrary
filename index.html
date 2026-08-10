@@ -10,27 +10,24 @@
 <body>
   <header class="site-header editor-site-header">
     <a class="brand" href="./" aria-label="Vocabulary Library home">
-      <span class="brand-mark" aria-hidden="true">字</span>
+      <span class="brand-mark" aria-hidden="true">词</span>
       <span><strong>The Mandarin Room</strong><small>Vocabulary Library</small></span>
     </a>
     <section class="voice-auth-panel home-auth-panel" aria-label="Teacher account">
       <strong id="voice-auth-state">Connecting…</strong>
       <div>
-        <button id="voice-sign-in" class="button secondary" type="button">Sign in</button>
+        <button id="voice-sign-in" class="button secondary" type="button">Teacher Sign in</button>
         <button id="voice-sign-out" class="button secondary" type="button" hidden>Sign out</button>
       </div>
     </section>
   </header>
 
   <main id="app" tabindex="-1">
-    <section aria-labelledby="sets-heading">
-      <div class="library-heading">
-        <h1 id="sets-heading">Your vocabulary sets</h1>
-        <a class="button primary" href="editor.html">+ New set</a>
-      </div>
+    <section aria-label="Vocabulary sets">
       <div class="library-controls">
         <nav id="year-filters" class="filter-row" aria-label="Filter by year level"></nav>
         <p id="set-summary" class="muted"></p>
+        <a id="new-set" class="button primary" href="editor.html" hidden>+ New set</a>
       </div>
       <div id="set-grid" class="set-grid" aria-live="polite"></div>
     </section>
@@ -41,6 +38,6 @@
     <span>The Mandarin Room © 2026</span>
     <span>Vocabulary v0.4 · Aug 2026</span>
   </footer>
-  <script type="module" src="js/app.js?v=teacher-login-cards-1"></script>
+  <script type="module" src="js/app.js?v=approved-home-auth-1"></script>
 </body>
 </html>
