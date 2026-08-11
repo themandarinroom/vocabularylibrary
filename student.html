@@ -5,23 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#173f3a">
   <title>Student Vocabulary · The Mandarin Room</title>
-  <link rel="stylesheet" href="css/styles.css?v=cloud-sync-1">
+  <link rel="stylesheet" href="css/styles.css?v=side-navigation-1">
 </head>
 <body class="student-page">
   <main id="student-app" class="student-shell" tabindex="-1">
     <div class="student-topline"><span id="set-label" class="student-set-label"></span><span id="position" class="position" aria-live="polite"></span></div>
     <div class="flashcard-area">
       <div class="display-toggle" role="group" aria-label="Card front display"><button id="show-pinyin" class="toggle-button active" type="button">Chinese + Pinyin</button><button id="hide-pinyin" class="toggle-button" type="button">Chinese only</button></div>
-      <button id="flashcard" class="flashcard" type="button" aria-label="Reveal English meaning" aria-pressed="false">
-        <span class="flashcard-inner"><span class="flashcard-face flashcard-front"><span id="student-content" class="student-content"></span><span class="tap-hint">Tap to reveal</span></span><span class="flashcard-face flashcard-back"><span id="student-english" class="student-english"></span><img id="student-image" alt="" hidden><span class="tap-hint">Tap to return</span></span></span>
-      </button>
-      <div class="student-audio audio-actions"><button id="ai-voice" class="button primary" type="button">▶ AI Voice</button><button id="teacher-voice" class="button primary" type="button" hidden disabled>▶ Teacher Voice</button></div>
-      <p id="audio-status" class="audio-status" role="status"></p>
+      <div class="student-stage">
+        <button id="previous" class="nav-button student-side-nav" type="button">← <span>Previous</span></button>
+        <div class="student-card-column">
+          <button id="flashcard" class="flashcard" type="button" aria-label="Reveal English meaning" aria-pressed="false">
+            <span class="flashcard-inner"><span class="flashcard-face flashcard-front"><span id="student-content" class="student-content"></span><span class="tap-hint">Tap to reveal</span></span><span class="flashcard-face flashcard-back"><span id="student-english" class="student-english"></span><img id="student-image" alt="" hidden><span class="tap-hint">Tap to return</span></span></span>
+          </button>
+          <div class="student-audio audio-actions"><button id="ai-voice" class="button primary" type="button">▶ AI Voice</button><button id="teacher-voice" class="button primary" type="button" hidden disabled>▶ Teacher Voice</button></div>
+          <p id="audio-status" class="audio-status" role="status"></p>
+        </div>
+        <button id="next" class="nav-button student-side-nav" type="button"><span>Next</span> →</button>
+      </div>
     </div>
-    <nav class="student-nav" aria-label="Vocabulary item navigation">
-      <button id="previous" class="nav-button" type="button">← <span>Previous</span></button>
-      <button id="next" class="nav-button" type="button"><span>Next</span> →</button>
-    </nav>
   </main>
   <script type="module" src="js/student.js?v=cloud-sync-2"></script>
 </body>
