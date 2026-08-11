@@ -38,6 +38,7 @@ if (!set) {
     pinyin.hidden = !showPinyin;
     const chinese = document.createElement("span");
     chinese.className = "student-chinese";
+    if ([...item.chinese.replace(/\s/g, "")].length >= 7) chinese.classList.add("student-chinese-long");
     chinese.lang = "zh-Hans";
     chinese.textContent = item.chinese;
     content.append(pinyin, chinese);
