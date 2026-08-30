@@ -40,7 +40,8 @@ function itemRow(item, index) {
   return `<article class="word-row" data-index="${index}">
     <span class="item-number">${String(index + 1).padStart(2, "0")}</span>
     <div class="word-main"><strong lang="zh-Hans">${item.chinese}</strong><span>${item.pinyin}</span></div>
-    <p>${item.english}</p>
+    <p class="word-english">${item.english}</p>
+    <div class="word-image-preview">${item.image ? `<img src="${item.image}" alt="Image preview for ${item.english || item.chinese}" loading="lazy" decoding="async">` : `<span>No image</span>`}</div>
     <div class="row-actions">
       <button class="icon-button ai-button" type="button" ${item.audio.aiEnabled ? "" : "disabled"} aria-label="Play AI voice for ${item.english}">▶ <span>AI Voice</span></button>
       <button class="icon-button teacher-button" type="button" ${teacherAvailable ? "" : "disabled"} aria-label="${teacherAvailable ? "Play" : "Teacher voice unavailable for"} ${item.english}">▶ <span>Teacher Voice</span></button>
