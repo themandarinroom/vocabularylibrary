@@ -28,7 +28,7 @@ function renderDashboard() {
       <div class="card-topline"><span class="year-badge">${yearLabel(set.yearLevel)}</span><span>${set.items.length} items</span></div>
       ${set.coverImage ? `<img class="set-card-cover" src="${set.coverImage}" alt="">` : ""}
       <div class="set-card-content"><p class="card-chinese" lang="zh-Hans">${set.chineseTitle}</p><h3>${set.title}</h3></div>
-      <div class="card-actions">${teacherLoggedIn ? `<a class="button secondary set-action" href="editor.html?set=${encodeURIComponent(set.id)}">Edit</a>` : ""}<a class="button primary set-action" href="student.html?set=${encodeURIComponent(set.id)}">Student View</a></div>
+      <div class="card-actions ${teacherLoggedIn ? "teacher-actions" : ""}">${teacherLoggedIn ? `<a class="button secondary set-action" href="editor.html?set=${encodeURIComponent(set.id)}">Edit</a><a class="button secondary set-action" href="editor.html?duplicate=${encodeURIComponent(set.id)}">Duplicate</a>` : ""}<a class="button primary set-action" href="student.html?set=${encodeURIComponent(set.id)}">Student View</a></div>
     </article>`).join("");
   if (!shown.length) grid.innerHTML = `<p class="empty-message">No sets for this year yet.</p>`;
   document.querySelector("#new-set").hidden = !teacherLoggedIn;

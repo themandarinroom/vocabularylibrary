@@ -1,6 +1,6 @@
-import { getSet, saveSet, deleteSet } from "./vocabulary-store.js?v=set-cover-1";
-import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
-import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=image-notes-1";
+import { getSet, getSets, saveSet, deleteSet } from "./vocabulary-store.js?v=duplicate-sets-1";
+import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=duplicate-sets-1";
+import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=duplicate-sets-1";
 
 const suggestions = {
   "中国": ["zhong guo", "China"], "美国": ["mei guo", "United States"], "英国": ["ying guo", "United Kingdom"], "日本": ["ri ben", "Japan"], "加拿大": ["jia na da", "Canada"], "澳大利亚": ["ao da li ya", "Australia"],
@@ -9,23 +9,43 @@ const suggestions = {
 const params = new URLSearchParams(location.search);
 const originalId = params.get("set");
 const existing = originalId ? await getSet(originalId) : null;
-let items = existing ? JSON.parse(JSON.stringify(existing.items)) : [];
+const duplicateId = originalId ? null : params.get("duplicate");
+const duplicateSource = duplicateId ? await getSet(duplicateId) : null;
+const draftSource = existing || duplicateSource;
+let items = draftSource ? JSON.parse(JSON.stringify(draftSource.items)) : [];
 const imageCandidates = new Map();
 const imageGenerationInFlight = new Set();
 let imageAuthorised = false;
 let batchGenerating = false;
-let coverImage = existing?.coverImage || null;
+let coverImage = draftSource?.coverImage || null;
 let coverImageStoragePath = existing?.coverImageStoragePath || null;
 let coverImageGenerated = existing?.coverImageGenerated === true;
 let coverCandidate = null;
 let coverGenerating = false;
-const preservedDescription = existing?.description || "";
+const preservedDescription = draftSource?.description || "";
 const $ = (selector) => document.querySelector(selector);
 const slug = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `item-${Date.now()}`;
 const newItem = (chinese = "", pinyin = "", english = "") => ({ id: `${slug(english || pinyin || "item")}-${Date.now().toString(36)}`, chinese, pinyin, english, image: null, imageType: "auto", imageGenerationNote: "", notes: "", type: "word", audio: { aiEnabled: true, teacherAudioUrl: null }, handwriting: { enabled: false, characters: Array.from(chinese.replace(/[\s？。！?!.]/g, "")) } });
 const generatedSetId = () => `${Number($("#year-level").value) === 0 ? "prep" : `year${$("#year-level").value}`}-${slug($("#title").value)}`.replace(/-+$/, "");
+const bindGeneratedSetId = () => { $("#year-level").addEventListener("change", () => { $("#set-id").value = generatedSetId(); }); $("#title").addEventListener("input", () => { $("#set-id").value = generatedSetId(); }); };
 if (existing) { $("#editor-title").textContent = `Edit ${existing.title}`; $("#year-level").value = existing.yearLevel; $("#set-id").value = existing.id; $("#set-id").readOnly = true; $("#title").value = existing.title; $("#chinese-title").value = existing.chineseTitle; $("#delete-set").hidden = false; }
-else { $("#year-level").value = 1; items.push(newItem()); $("#set-id").value = generatedSetId(); $("#year-level").addEventListener("change", () => { $("#set-id").value = generatedSetId(); }); $("#title").addEventListener("input", () => { $("#set-id").value = generatedSetId(); }); }
+else if (duplicateSource) {
+  const duplicateStamp = Date.now().toString(36);
+  items = items.map((item, index) => {
+    const copy = { ...item, id: `${slug(item.english || item.pinyin || item.chinese || `item-${index + 1}`)}-${duplicateStamp}-${index + 1}`, audio: { ...(item.audio || {}), aiEnabled: item.audio?.aiEnabled !== false, teacherAudioUrl: null } };
+    delete copy.imageStoragePath;
+    delete copy.imageGenerated;
+    return copy;
+  });
+  $("#editor-title").textContent = `Duplicate ${duplicateSource.title}`;
+  $("#year-level").value = duplicateSource.yearLevel;
+  $("#title").value = `${duplicateSource.title} Copy`;
+  $("#chinese-title").value = duplicateSource.chineseTitle || "";
+  $("#set-id").value = generatedSetId();
+  bindGeneratedSetId();
+  $("#form-status").textContent = `Duplicated from “${duplicateSource.title}”. Review the new title and items, then save as a new set. Teacher Voice recordings are not copied.`;
+}
+else { $("#year-level").value = 1; items.push(newItem()); $("#set-id").value = generatedSetId(); bindGeneratedSetId(); }
 $("#set-cover-url").value = coverImage || "";
 
 function renderItems() {
@@ -47,6 +67,16 @@ function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) =>
 function move(index, change) { const target = index + change; if (target < 0 || target >= items.length) return; [items[index], items[target]] = [items[target], items[index]]; renderItems(); }
 function updateAllRows() { document.querySelectorAll(".item-editor").forEach(updateFromRow); }
 function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, coverImage, coverImageStoragePath, coverImageGenerated, items }; }
+async function deleteGeneratedImageIfUnreferenced(storagePath, imageUrl, currentSetId) {
+  if (!storagePath || !imageUrl) return;
+  try {
+    const sets = await getSets();
+    const stillReferenced = sets.some((set) => set.id !== currentSetId && (set.coverImage === imageUrl || set.items.some((item) => item.image === imageUrl)));
+    if (!stillReferenced) await deleteGeneratedVocabularyImage(storagePath);
+  } catch (error) {
+    console.error("[Vocabulary image reference check] Generated image retained for safety.", error);
+  }
+}
 function candidateFor(itemId) { return imageCandidates.get(itemId) || null; }
 function discardCandidate(itemId) { const candidate = candidateFor(itemId); if (candidate?.previewUrl) URL.revokeObjectURL(candidate.previewUrl); imageCandidates.delete(itemId); }
 function readableImageError(error) {
@@ -117,7 +147,7 @@ async function acceptSetCover() {
     $("#set-cover-url").value = coverImage;
     $("#set-cover-status").textContent = "Saving the approved Set Cover to the vocabulary set…";
     await saveSet(buildSet(), originalId);
-    if (previous.coverImageGenerated && previous.coverImageStoragePath) await deleteGeneratedVocabularyImage(previous.coverImageStoragePath).catch((error) => console.error("[Set cover cleanup]", error));
+    if (previous.coverImageGenerated && previous.coverImageStoragePath) await deleteGeneratedImageIfUnreferenced(previous.coverImageStoragePath, previous.coverImage, existing.id);
     discardCoverCandidate();
     location.href = `./?set=${encodeURIComponent(existing.id)}`;
   } catch (error) {
@@ -205,7 +235,7 @@ async function saveApprovedImages() {
     }
     $("#form-status").textContent = "Saving approved images to the vocabulary set…";
     await saveSet(buildSet(), originalId);
-    await Promise.allSettled(uploaded.filter((entry) => entry.previous.imageGenerated && entry.previous.imageStoragePath).map((entry) => deleteGeneratedVocabularyImage(entry.previous.imageStoragePath)));
+    await Promise.allSettled(uploaded.filter((entry) => entry.previous.imageGenerated && entry.previous.imageStoragePath).map((entry) => deleteGeneratedImageIfUnreferenced(entry.previous.imageStoragePath, entry.previous.image, existing.id)));
     uploaded.forEach((entry) => discardCandidate(entry.item.id));
     location.href = `./?set=${encodeURIComponent(existing.id)}`;
   } catch (error) {
