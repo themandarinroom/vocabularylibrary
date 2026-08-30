@@ -13,15 +13,15 @@ function base64ToBlob(base64, contentType) {
 
 function generatedImageResult(data) {
   if (!data.imageBase64 || !String(data.contentType || "").startsWith("image/")) throw new Error("The image service returned an invalid result.");
-  return { blob: base64ToBlob(data.imageBase64, data.contentType), concept: data.concept || "", requestId: data.requestId || "", contentType: data.contentType };
+  return { blob: base64ToBlob(data.imageBase64, data.contentType), concept: data.concept || "", composition: data.composition || "single", requestId: data.requestId || "", contentType: data.contentType };
 }
 
-export async function generateVocabularyImage(setId, itemId, { replaceExisting = false, english = "", chinese = "" } = {}) {
+export async function generateVocabularyImage(setId, itemId, { replaceExisting = false, english = "", chinese = "", imageType = "auto" } = {}) {
   assertIds(setId, itemId);
   const services = await getFirebaseServices();
   if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before generating images.");
   const generate = services.functionsSdk.httpsCallable(services.functions, "generateVocabularyImage", { timeout: 120000 });
-  const response = await generate({ setId, itemId, replaceExisting: replaceExisting === true, english: String(english).slice(0, 120), chinese: String(chinese).slice(0, 80) });
+  const response = await generate({ setId, itemId, replaceExisting: replaceExisting === true, english: String(english).slice(0, 120), chinese: String(chinese).slice(0, 80), imageType: ["single", "group"].includes(imageType) ? imageType : "auto" });
   return generatedImageResult(response.data || {});
 }
 
