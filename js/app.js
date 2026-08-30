@@ -1,4 +1,4 @@
-import { getSets, getSet, watchSets } from "./vocabulary-store.js?v=cloud-sync-1";
+import { getSets, getSet, watchSets } from "./vocabulary-store.js?v=set-cover-1";
 import { canUseAiVoice, speakMandarin, playTeacherVoice } from "./audio.js";
 import { cacheSafeAudioUrl, watchTeacherVoice } from "./teacher-voice-cloud.js";
 import { initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=teacher-login-cards-1";
@@ -26,7 +26,8 @@ function renderDashboard() {
   grid.innerHTML = shown.map((set) => `
     <article class="set-card year-${set.yearLevel}">
       <div class="card-topline"><span class="year-badge">${yearLabel(set.yearLevel)}</span><span>${set.items.length} items</span></div>
-      <div><p class="card-chinese" lang="zh-Hans">${set.chineseTitle}</p><h3>${set.title}</h3></div>
+      ${set.coverImage ? `<img class="set-card-cover" src="${set.coverImage}" alt="">` : ""}
+      <div class="set-card-content"><p class="card-chinese" lang="zh-Hans">${set.chineseTitle}</p><h3>${set.title}</h3></div>
       <div class="card-actions">${teacherLoggedIn ? `<a class="button secondary set-action" href="editor.html?set=${encodeURIComponent(set.id)}">Edit</a>` : ""}<a class="button primary set-action" href="student.html?set=${encodeURIComponent(set.id)}">Student View</a></div>
     </article>`).join("");
   if (!shown.length) grid.innerHTML = `<p class="empty-message">No sets for this year yet.</p>`;

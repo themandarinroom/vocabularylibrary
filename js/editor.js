@@ -1,6 +1,6 @@
-import { getSet, saveSet, deleteSet } from "./vocabulary-store.js?v=cloud-sync-1";
+import { getSet, saveSet, deleteSet } from "./vocabulary-store.js?v=set-cover-1";
 import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=cloud-sync-1";
-import { deleteGeneratedVocabularyImage, generateVocabularyImage, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=auto-images-1";
+import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=set-cover-1";
 
 const suggestions = {
   "中国": ["zhong guo", "China"], "美国": ["mei guo", "United States"], "英国": ["ying guo", "United Kingdom"], "日本": ["ri ben", "Japan"], "加拿大": ["jia na da", "Canada"], "澳大利亚": ["ao da li ya", "Australia"],
@@ -14,6 +14,11 @@ const imageCandidates = new Map();
 const imageGenerationInFlight = new Set();
 let imageAuthorised = false;
 let batchGenerating = false;
+let coverImage = existing?.coverImage || null;
+let coverImageStoragePath = existing?.coverImageStoragePath || null;
+let coverImageGenerated = existing?.coverImageGenerated === true;
+let coverCandidate = null;
+let coverGenerating = false;
 const preservedDescription = existing?.description || "";
 const $ = (selector) => document.querySelector(selector);
 const slug = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `item-${Date.now()}`;
@@ -21,6 +26,7 @@ const newItem = (chinese = "", pinyin = "", english = "") => ({ id: `${slug(engl
 const generatedSetId = () => `${Number($("#year-level").value) === 0 ? "prep" : `year${$("#year-level").value}`}-${slug($("#title").value)}`.replace(/-+$/, "");
 if (existing) { $("#editor-title").textContent = `Edit ${existing.title}`; $("#year-level").value = existing.yearLevel; $("#set-id").value = existing.id; $("#set-id").readOnly = true; $("#title").value = existing.title; $("#chinese-title").value = existing.chineseTitle; $("#delete-set").hidden = false; }
 else { $("#year-level").value = 1; items.push(newItem()); $("#set-id").value = generatedSetId(); $("#year-level").addEventListener("change", () => { $("#set-id").value = generatedSetId(); }); $("#title").addEventListener("input", () => { $("#set-id").value = generatedSetId(); }); }
+$("#set-cover-url").value = coverImage || "";
 
 function renderItems() {
   $("#items").innerHTML = items.map((item, index) => `<article class="item-editor compact-item-row" data-index="${index}">
@@ -40,7 +46,7 @@ function updateFromRow(row) { const item = items[Number(row.dataset.index)]; row
 function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("input", () => updateFromRow(row))); row.querySelector(".remove-item").onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); items.splice(Number(row.dataset.index), 1); renderItems(); renderImageReview(); }; row.querySelector(".move-up").onclick = () => move(Number(row.dataset.index), -1); row.querySelector(".move-down").onclick = () => move(Number(row.dataset.index), 1); row.querySelector(".suggest").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; const match = suggestions[item.chinese.trim()]; if (match) { if (!item.pinyin) item.pinyin = match[0]; if (!item.english) item.english = match[1]; $("#form-status").textContent = "Suggestions added. Review and edit before saving."; renderItems(); } else $("#form-status").textContent = "No local suggestion found. Enter Pinyin and English manually."; }; row.querySelector(".find-image").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; requestImageCandidate(item, Boolean(item.image)); }; }
 function move(index, change) { const target = index + change; if (target < 0 || target >= items.length) return; [items[index], items[target]] = [items[target], items[index]]; renderItems(); }
 function updateAllRows() { document.querySelectorAll(".item-editor").forEach(updateFromRow); }
-function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, items }; }
+function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, coverImage, coverImageStoragePath, coverImageGenerated, items }; }
 function candidateFor(itemId) { return imageCandidates.get(itemId) || null; }
 function discardCandidate(itemId) { const candidate = candidateFor(itemId); if (candidate?.previewUrl) URL.revokeObjectURL(candidate.previewUrl); imageCandidates.delete(itemId); }
 function readableImageError(error) {
@@ -50,6 +56,77 @@ function readableImageError(error) {
   if (/not-found|failed-precondition/i.test(error?.code || "")) return message.replace(/^FirebaseError:\s*/i, "");
   console.error("[Vocabulary Images]", error);
   return "Image generation could not complete. No vocabulary data was changed.";
+}
+function discardCoverCandidate() {
+  if (coverCandidate?.previewUrl) URL.revokeObjectURL(coverCandidate.previewUrl);
+  coverCandidate = null;
+}
+function renderSetCover() {
+  const current = $("#set-cover-current");
+  current.innerHTML = coverImage ? `<img src="${escapeHtml(coverImage)}" alt="Current Vocabulary Set cover"><span>Current saved cover</span>` : "";
+  const generateButton = $("#generate-set-cover");
+  generateButton.textContent = coverImage ? "Find replacement cover" : "Generate Set Cover";
+  generateButton.disabled = !imageAuthorised || !existing || coverGenerating || Boolean(coverCandidate);
+  generateButton.title = !existing ? "Save this vocabulary set before generating a cover." : !imageAuthorised ? "Sign in with an authorised teacher account." : coverCandidate ? "Review or skip the current suggestion first." : "";
+  const review = $("#set-cover-review");
+  review.hidden = !coverCandidate;
+  if (coverCandidate) {
+    $("#set-cover-candidate").src = coverCandidate.previewUrl;
+    $("#set-cover-candidate-status").textContent = coverCandidate.replaceExisting ? "Replacement candidate — the current cover remains unchanged until you accept and save." : "Nothing is saved until you accept it.";
+  } else $("#set-cover-candidate").removeAttribute("src");
+  $("#accept-set-cover").disabled = coverGenerating || !coverCandidate;
+  $("#replace-set-cover").disabled = coverGenerating || !coverCandidate;
+  $("#skip-set-cover").disabled = coverGenerating || !coverCandidate;
+}
+async function requestSetCover(replaceCandidate = false) {
+  if (!existing) { $("#set-cover-status").textContent = "Save this vocabulary set before generating a cover."; return; }
+  if (!imageAuthorised) { $("#set-cover-status").textContent = "Sign in with an authorised teacher account before generating a cover."; return; }
+  if (coverGenerating) return;
+  const replacingSavedCover = Boolean(coverImage);
+  if (coverCandidate && !replaceCandidate) { renderSetCover(); return; }
+  const message = replacingSavedCover || replaceCandidate
+    ? "Generate a new paid Set Cover suggestion? The current saved cover remains unchanged until you explicitly accept and save the replacement."
+    : "Generate one paid Set Cover suggestion from the saved set title and vocabulary items? Allow about US$0.01 at current GPT Image rates. Nothing will be saved until you accept it.";
+  if (!confirm(message)) return;
+  coverGenerating = true;
+  $("#set-cover-status").textContent = "Generating a representative Set Cover from the saved vocabulary items…";
+  renderSetCover();
+  try {
+    const result = await generateVocabularySetCover(existing.id, { replaceExisting: replacingSavedCover });
+    discardCoverCandidate();
+    coverCandidate = { ...result, previewUrl: URL.createObjectURL(result.blob), replaceExisting: replacingSavedCover };
+    $("#set-cover-status").textContent = "Cover suggestion ready. Accept, replace or skip it.";
+  } catch (error) { $("#set-cover-status").textContent = readableImageError(error); }
+  finally { coverGenerating = false; renderSetCover(); }
+}
+async function acceptSetCover() {
+  if (!coverCandidate || coverGenerating) return;
+  if (coverImage && !coverCandidate.replaceExisting) { $("#set-cover-status").textContent = "The set now has a cover. Choose Replace explicitly before generating another."; return; }
+  updateAllRows();
+  const previous = { coverImage, coverImageStoragePath, coverImageGenerated };
+  let uploaded = null;
+  coverGenerating = true;
+  renderSetCover();
+  try {
+    $("#set-cover-status").textContent = "Uploading approved Set Cover…";
+    uploaded = await uploadApprovedVocabularyImage(existing.id, "cover", coverCandidate.blob, (percent) => { $("#set-cover-status").textContent = `Uploading approved Set Cover… ${percent}%`; });
+    coverImage = uploaded.imageUrl;
+    coverImageStoragePath = uploaded.imageStoragePath;
+    coverImageGenerated = true;
+    $("#set-cover-url").value = coverImage;
+    $("#set-cover-status").textContent = "Saving the approved Set Cover to the vocabulary set…";
+    await saveSet(buildSet(), originalId);
+    if (previous.coverImageGenerated && previous.coverImageStoragePath) await deleteGeneratedVocabularyImage(previous.coverImageStoragePath).catch((error) => console.error("[Set cover cleanup]", error));
+    discardCoverCandidate();
+    location.href = `./?set=${encodeURIComponent(existing.id)}`;
+  } catch (error) {
+    coverImage = previous.coverImage;
+    coverImageStoragePath = previous.coverImageStoragePath;
+    coverImageGenerated = previous.coverImageGenerated;
+    $("#set-cover-url").value = coverImage || "";
+    if (uploaded?.imageStoragePath) await deleteGeneratedVocabularyImage(uploaded.imageStoragePath).catch((cleanupError) => console.error("[Set cover rollback]", cleanupError));
+    $("#set-cover-status").textContent = error.message || "The approved Set Cover could not be saved. The existing cover was preserved.";
+  } finally { coverGenerating = false; renderSetCover(); }
 }
 function updateImageActions() {
   const canGenerate = Boolean(imageAuthorised && existing && !batchGenerating);
@@ -139,8 +216,18 @@ $("#import-items").onclick = () => { const lines = $("#bulk-input").value.split(
 $("#auto-add-images").onclick = autoAddMissingImages;
 $("#save-approved-images").onclick = saveApprovedImages;
 $("#close-image-review").onclick = () => { $("#image-review").hidden = true; };
+$("#set-cover-url").addEventListener("input", (event) => {
+  const nextCover = event.target.value.trim() || null;
+  if (nextCover !== coverImage) { coverImage = nextCover; coverImageStoragePath = null; coverImageGenerated = false; }
+  renderSetCover();
+});
+$("#generate-set-cover").onclick = () => requestSetCover(false);
+$("#replace-set-cover").onclick = () => requestSetCover(true);
+$("#skip-set-cover").onclick = () => { discardCoverCandidate(); $("#set-cover-status").textContent = "Suggestion skipped. The current cover was not changed."; renderSetCover(); };
+$("#accept-set-cover").onclick = acceptSetCover;
 $("#set-form").onsubmit = async (event) => { event.preventDefault(); updateAllRows(); if (!existing && !$("#set-id").value.trim()) $("#set-id").value = generatedSetId(); const set = buildSet(); const saveButton = $("#set-form button[type=submit]"); saveButton.disabled = true; $("#form-status").textContent = "Saving to cloud…"; try { await saveSet(set, originalId); location.href = `./?set=${encodeURIComponent(set.id)}`; } catch (error) { $("#form-status").textContent = error.message; saveButton.disabled = false; } };
 $("#delete-set").onclick = async () => { if (confirm(`Delete “${existing.title}” from every device?`)) { try { await deleteSet(originalId); location.href = "./"; } catch (error) { $("#form-status").textContent = error.message; } } };
-initialiseTeacherVoiceAuth(() => $("#set-id").value.trim(), ({ authorised }) => { imageAuthorised = authorised === true; renderItems(); renderImageReview(); });
-window.addEventListener("beforeunload", () => imageCandidates.forEach((candidate) => { if (candidate.previewUrl) URL.revokeObjectURL(candidate.previewUrl); }));
+initialiseTeacherVoiceAuth(() => $("#set-id").value.trim(), ({ authorised }) => { imageAuthorised = authorised === true; renderItems(); renderImageReview(); renderSetCover(); });
+window.addEventListener("beforeunload", () => { imageCandidates.forEach((candidate) => { if (candidate.previewUrl) URL.revokeObjectURL(candidate.previewUrl); }); discardCoverCandidate(); });
 renderItems();
+renderSetCover();

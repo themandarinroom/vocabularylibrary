@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f3e9"><title>Edit Set · Vocabulary Library</title><link rel="stylesheet" href="css/styles.css?v=brand-cn-1"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f3e9"><title>Edit Set · Vocabulary Library</title><link rel="stylesheet" href="css/styles.css?v=set-cover-1"></head>
 <body><header class="site-header editor-site-header"><a class="brand" href="./"><span class="brand-mark" aria-hidden="true">中文</span><span><strong>The Mandarin Room</strong><small>Vocabulary Library</small></span></a><section class="voice-auth-panel"><div><strong id="voice-auth-state">Connecting Teacher Voice Cloud…</strong><p>Only authorised teachers can upload or delete recordings.</p></div><div><button id="voice-sign-in" class="button secondary" type="button">Sign in with Google</button><button id="voice-sign-out" class="button secondary" type="button" hidden>Sign out</button></div></section></header>
 <main class="editor-main"><a class="quiet-link" href="./">← Vocabulary Library</a><form id="set-form">
   <div class="editor-heading"><div><p class="eyebrow">Teacher authoring</p><h1 id="editor-title">New vocabulary set</h1></div><div class="editor-actions"><button class="button primary" type="submit">Save set</button><button id="delete-set" class="button danger" type="button" hidden>Delete set</button></div></div>
@@ -8,7 +8,15 @@
     <label>Year level<select id="year-level" required><option value="0">Prep</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select></label>
     <label>English title<input id="title" required></label>
     <label>Chinese title<input id="chinese-title" lang="zh-Hans"></label>
-  </div><details class="optional-editor set-details-advanced"><summary>Advanced</summary><div class="optional-editor-body"><label>Stable ID<input id="set-id" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="year5-countries"><small>Generated automatically for new sets. Existing IDs remain unchanged.</small></label></div></details></section>
+  </div><details class="optional-editor set-details-advanced"><summary>Advanced</summary><div class="optional-editor-body"><label>Stable ID<input id="set-id" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="year5-countries"><small>Generated automatically for new sets. Existing IDs remain unchanged.</small></label>
+    <section class="set-cover-editor" aria-labelledby="set-cover-title"><div><strong id="set-cover-title">Vocabulary Set cover</strong><small>Generate a representative group image from this set's title and actual vocabulary items.</small></div>
+      <label>Cover Image URL<input id="set-cover-url" type="url" placeholder="Optional cover image URL"></label>
+      <div id="set-cover-current" class="set-cover-current"></div>
+      <button id="generate-set-cover" class="mini-button" type="button" disabled>Generate Set Cover</button>
+      <section id="set-cover-review" class="set-cover-review" hidden><img id="set-cover-candidate" alt="Generated Vocabulary Set cover candidate"><div><strong>Review cover suggestion</strong><small id="set-cover-candidate-status">Nothing is saved until you accept it.</small><div class="set-cover-actions"><button id="accept-set-cover" class="mini-button primary" type="button">Accept &amp; Save</button><button id="replace-set-cover" class="mini-button" type="button">Replace</button><button id="skip-set-cover" class="mini-button" type="button">Skip</button></div></div></section>
+      <p id="set-cover-status" class="voice-status" role="status"></p>
+    </section>
+  </div></details></section>
   <section class="form-panel vocabulary-items-panel"><div class="panel-heading"><div><p class="eyebrow">Fast authoring</p><h2>Vocabulary items</h2></div><button id="auto-add-images" class="button secondary" type="button" disabled>Auto Add Missing Images</button></div>
     <section class="quick-paste-panel"><div class="quick-paste-copy"><h3>⚡ Quick Paste</h3><p>One item per line: Chinese, <code>Chinese | English</code>, or <code>Chinese | pinyin | English</code>.</p></div><textarea id="bulk-input" rows="4" aria-label="Quick Paste vocabulary" placeholder="中国 | zhong guo | China&#10;美国 | mei guo | United States"></textarea><button id="import-items" class="button primary" type="button">Create Items</button></section>
     <section id="image-review" class="image-review" hidden aria-labelledby="image-review-title"><div class="image-review-heading"><div><h3 id="image-review-title">Review image suggestions</h3><p>Accept, replace or skip each suggestion. Nothing is saved until you choose Save approved images.</p></div><div><button id="save-approved-images" class="button primary" type="button">Save approved images</button><button id="close-image-review" class="button secondary" type="button">Close</button></div></div><div id="image-review-grid" class="image-review-grid"></div></section>
@@ -16,4 +24,4 @@
     <div id="items" class="item-editor-list"></div>
     <button id="add-item" class="button secondary compact-add-item" type="button">+ Add item</button>
   </section>
-</form></main><footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Vocabulary v0.4.1 · Aug 2026</span></footer><script type="module" src="js/editor.js?v=auto-images-1"></script></body></html>
+</form></main><footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Vocabulary v0.4.1 · Aug 2026</span></footer><script type="module" src="js/editor.js?v=set-cover-1"></script></body></html>

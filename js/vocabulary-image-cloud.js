@@ -11,15 +11,27 @@ function base64ToBlob(base64, contentType) {
   return new Blob([bytes], { type: contentType });
 }
 
+function generatedImageResult(data) {
+  if (!data.imageBase64 || !String(data.contentType || "").startsWith("image/")) throw new Error("The image service returned an invalid result.");
+  return { blob: base64ToBlob(data.imageBase64, data.contentType), concept: data.concept || "", requestId: data.requestId || "", contentType: data.contentType };
+}
+
 export async function generateVocabularyImage(setId, itemId, { replaceExisting = false, english = "", chinese = "" } = {}) {
   assertIds(setId, itemId);
   const services = await getFirebaseServices();
   if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before generating images.");
   const generate = services.functionsSdk.httpsCallable(services.functions, "generateVocabularyImage", { timeout: 120000 });
   const response = await generate({ setId, itemId, replaceExisting: replaceExisting === true, english: String(english).slice(0, 120), chinese: String(chinese).slice(0, 80) });
-  const data = response.data || {};
-  if (!data.imageBase64 || !String(data.contentType || "").startsWith("image/")) throw new Error("The image service returned an invalid result.");
-  return { blob: base64ToBlob(data.imageBase64, data.contentType), concept: data.concept || "", requestId: data.requestId || "", contentType: data.contentType };
+  return generatedImageResult(response.data || {});
+}
+
+export async function generateVocabularySetCover(setId, { replaceExisting = false } = {}) {
+  assertIds(setId, "set-cover");
+  const services = await getFirebaseServices();
+  if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before generating a set cover.");
+  const generate = services.functionsSdk.httpsCallable(services.functions, "generateVocabularyImage", { timeout: 120000 });
+  const response = await generate({ setId, target: "set-cover", replaceExisting: replaceExisting === true });
+  return generatedImageResult(response.data || {});
 }
 
 export async function uploadApprovedVocabularyImage(setId, itemId, blob, onProgress = () => {}) {

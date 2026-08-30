@@ -32,6 +32,9 @@ function publicSet(data) {
     title: data.title,
     chineseTitle: data.chineseTitle || "",
     description: data.description || "",
+    coverImage: data.coverImage || null,
+    coverImageStoragePath: data.coverImageStoragePath || null,
+    coverImageGenerated: data.coverImageGenerated === true,
     items: Array.isArray(data.items) ? data.items : []
   });
 }
