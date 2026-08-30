@@ -56,6 +56,15 @@ function itemImagePrompt(concept) {
   return `A clear child-friendly classroom vocabulary illustration of one ${concept}. Simple warm picture-book style, centred subject, immediately recognisable at thumbnail size, plain light neutral background, minimal visual detail, consistent soft colours, no border, no label, no letters, no words, no text.`;
 }
 
+function teacherNotePrompt(concept, note) {
+  return `Teacher's primary image instruction: ${note}. Follow that instruction first, especially the requested subject count, grouping, context and distinguishing details. The vocabulary concept is “${concept}”. Apply this consistent default style: child-friendly primary-school educational illustration, clear recognisable subjects, simple uncluttered light background, warm picture-book appearance, soft consistent colours, no border, no labels, no letters, no words, no text.`;
+}
+
+function imageGenerationNote(item, requestedNote) {
+  const value = typeof requestedNote === "string" ? requestedNote : item?.imageGenerationNote;
+  return String(value || "").trim().slice(0, 300);
+}
+
 function itemUsesGroupPrompt(set, item, requestedImageType) {
   const imageType = ["single", "group"].includes(requestedImageType) ? requestedImageType : String(item?.imageType || "auto");
   if (imageType === "group") return true;
@@ -109,10 +118,12 @@ exports.generateVocabularyImage = onCall({
   if (target === "item" && !item) throw new HttpsError("not-found", "Vocabulary item not found.");
   if (target === "item" && item.image && !replaceExisting) throw new HttpsError("failed-precondition", "This item already has an image. Choose Replace explicitly to generate another candidate.");
   if (target === "set-cover" && set.coverImage && !replaceExisting) throw new HttpsError("failed-precondition", "This set already has a cover image. Choose Replace explicitly to generate another candidate.");
+  const note = target === "item" ? imageGenerationNote(item, request.data?.imageGenerationNote) : "";
   const groupItem = target === "item" && itemUsesGroupPrompt(set, item, request.data?.imageType);
   const concept = target === "set-cover" ? String(set.title || set.chineseTitle || "Vocabulary set").trim() : generationConcept(item, request.data?.english, request.data?.chinese);
   if (!concept) throw new HttpsError("failed-precondition", target === "set-cover" ? "Add a set title before generating a cover image." : "Add an English meaning or Chinese text before generating an image.");
-  const prompt = target === "set-cover" || groupItem ? setCoverPrompt(set, setCoverConcepts(set)) : itemImagePrompt(concept);
+  const prompt = note ? teacherNotePrompt(concept, note) : target === "set-cover" || groupItem ? setCoverPrompt(set, setCoverConcepts(set)) : itemImagePrompt(concept);
+  const noteRequestsGroup = /\b(several|multiple|different|various|group|category|variety|together|collection)\b/i.test(note);
 
   const reservation = await reserveGeneration(request.auth.uid, setId, itemId);
   try {
@@ -126,7 +137,7 @@ exports.generateVocabularyImage = onCall({
     const imageBase64 = result.data?.[0]?.b64_json;
     if (!imageBase64) throw new HttpsError("internal", "Image generation returned no image.");
     if (Buffer.byteLength(imageBase64, "base64") >= 2 * 1024 * 1024) throw new HttpsError("resource-exhausted", "The generated image was too large to save safely. Try replacing it with another suggestion.");
-    return { imageBase64, contentType: "image/webp", concept, target, composition: target === "set-cover" || groupItem ? "group" : "single", requestId: result.data?.[0]?.id || crypto.randomUUID() };
+    return { imageBase64, contentType: "image/webp", concept, target, composition: target === "set-cover" || groupItem || noteRequestsGroup ? "group" : "single", noteApplied: Boolean(note), requestId: result.data?.[0]?.id || crypto.randomUUID() };
   } catch (error) {
     await releaseFailedGeneration(reservation);
     if (error instanceof HttpsError) throw error;
