@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b9eff7">
+  <title>Join Lucky Draw · The Mandarin Room</title>
+  <link rel="stylesheet" href="styles.css?v=student-ui-2">
+</head>
+<body class="student-page">
+  <main>
+    <section id="student-join" class="student-join-card">
+      <span class="brand-mark" aria-hidden="true">中文</span>
+      <p class="eyebrow">Live Classroom · 在线课堂</p>
+      <h1>Join Lucky Draw</h1>
+      <label>Class code<input id="student-code" inputmode="text" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE"></label>
+      <label>This iPad name<input id="student-name" maxlength="40" autocomplete="off" placeholder="e.g. Green Table iPad"></label>
+      <button id="student-join-button" class="primary-button" type="button">Join class</button>
+      <p id="student-join-error" role="alert"></p>
+    </section>
+
+    <section id="student-session" class="student-session" hidden>
+      <div class="park-sky" aria-hidden="true"><span class="cloud cloud-one"></span><span class="cloud cloud-two"></span><span class="tree tree-left"><i></i></span><span class="tree tree-right"><i></i></span><span class="distant-hills"></span><span class="park-bushes"></span></div>
+      <header class="student-statusbar">
+        <span id="student-connection" class="connection-pill">Connecting…</span>
+        <strong id="student-group">Whole class</strong>
+        <span id="student-draw-number">Draw 0</span>
+      </header>
+      <section id="student-result-card" class="result-card waiting" aria-live="polite" aria-label="Current vocabulary">
+        <div id="student-waiting" class="waiting-copy student-waiting">
+          <div class="waiting-draw-box" aria-hidden="true"><span class="paw-image"></span></div>
+          <p class="waiting-zh" lang="zh-Hans">等待老师开始</p>
+          <strong>Ready for Lucky Draw</strong>
+          <small>You’re connected. The first word will appear here.</small>
+          <span class="waiting-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
+        <img id="student-image" alt="" hidden>
+        <div class="result-language">
+          <div id="student-chinese" class="result-chinese" lang="zh-Hans" hidden></div>
+          <div id="student-pinyin" class="result-pinyin" hidden></div>
+          <div id="student-english" class="result-english" hidden></div>
+        </div>
+        <div id="student-voice-actions" class="voice-actions" hidden>
+          <button id="student-play-voice" class="voice-button" type="button">🔊 <span>Play voice</span></button>
+          <button id="student-play-teacher" class="voice-button" type="button" hidden>👩‍🏫 <span>Teacher Voice</span></button>
+        </div>
+        <p id="student-audio-status" class="audio-status" role="status"></p>
+      </section>
+      <button id="student-draw" class="student-draw-button" type="button" hidden><span lang="zh-Hans">点击抽取</span><strong>Tap to Draw</strong><span class="paw-image" aria-hidden="true"></span></button>
+      <p id="student-session-message" class="student-session-message" role="status">Waiting for the teacher…</p>
+    </section>
+  </main>
+  <script type="module" src="runtime-bootstrap.mjs?v=student-ui-2"></script>
+</body>
+</html>

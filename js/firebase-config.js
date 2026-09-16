@@ -1,6 +1,6 @@
 // Public Firebase web-app configuration shared with The Mandarin Room Speaking.
 // Access is enforced by Firebase Authentication and security rules, not by hiding this config.
-export const firebaseConfig = {
+const productionFirebaseConfig = {
   apiKey: "AIzaSyAFqL3XTgZaL-w2G0UIJ3TVTqY1j1n7y24",
   authDomain: "the-mandarin-room.firebaseapp.com",
   projectId: "the-mandarin-room",
@@ -8,3 +8,9 @@ export const firebaseConfig = {
   messagingSenderId: "940574313978",
   appId: "1:940574313978:web:24db38b28ec255c63de843"
 };
+
+// A staging page may define this object before importing Firebase modules.
+// Production pages use the existing configuration above unchanged.
+const runtime = globalThis.__TMR_FIREBASE_RUNTIME__ || {};
+export const firebaseConfig = Object.freeze(runtime.firebaseConfig || productionFirebaseConfig);
+export const firebaseAppCheckConfig = runtime.appCheck?.siteKey ? Object.freeze({ siteKey: runtime.appCheck.siteKey }) : null;

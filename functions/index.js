@@ -145,3 +145,8 @@ exports.generateVocabularyImage = onCall({
     throw new HttpsError("internal", "Image generation could not complete. No vocabulary data was changed.");
   }
 });
+
+// Word Randomiser live sessions share the production Vocabulary Library as
+// their authoritative source. The module exports only the reviewed session
+// callables and scheduled cleanup jobs; existing functions remain unchanged.
+Object.assign(exports, require("./live-game-sessions"));

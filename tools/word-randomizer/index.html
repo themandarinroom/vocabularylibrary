@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffdf75">
+  <title>Word Randomiser · The Mandarin Room</title>
+  <link rel="stylesheet" href="styles.css?v=join-qr-1">
+</head>
+<body>
+  <header class="tool-header">
+    <a class="brand" href="../../" aria-label="Back to Vocabulary Library">
+      <span class="brand-mark" aria-hidden="true">中文</span>
+      <span><strong>The Mandarin Room</strong><small>Classroom Tools</small></span>
+    </a>
+  </header>
+
+  <main>
+    <section id="setup-screen" class="setup-screen">
+      <div class="setup-intro">
+        <p class="eyebrow">Lucky Draw · 抽签盒</p>
+        <h1>Word Randomiser</h1>
+        <p>Choose live vocabulary from your Library, then make a temporary draw pool for this session.</p>
+      </div>
+
+      <div class="setup-grid">
+        <section class="panel set-panel" aria-labelledby="sets-heading">
+          <div class="panel-heading">
+            <div><span class="step">1</span><h2 id="sets-heading">Vocabulary sets</h2></div>
+            <span id="library-status" class="status" role="status">Loading Library…</span>
+          </div>
+          <div id="set-list" class="set-list" aria-live="polite"></div>
+        </section>
+
+        <section class="panel words-panel" aria-labelledby="words-heading">
+          <div class="panel-heading words-heading">
+            <div><span class="step">2</span><h2 id="words-heading">Words in this draw</h2></div>
+            <span id="selected-count" class="count-pill">0 selected</span>
+          </div>
+          <div class="selection-actions">
+            <button id="select-all" class="text-button" type="button">Select All</button>
+            <button id="deselect-all" class="text-button" type="button">Deselect All</button>
+          </div>
+          <div id="word-list" class="word-list" aria-live="polite">
+            <p class="empty-copy">Choose one or more sets to see their words.</p>
+          </div>
+        </section>
+
+        <section class="panel options-panel" aria-labelledby="options-heading">
+          <div class="panel-heading"><div><span class="step">3</span><h2 id="options-heading">Classroom settings</h2></div></div>
+          <div class="options-grid">
+            <fieldset>
+              <legend>Draw mode</legend>
+              <label class="choice-card"><input type="radio" name="draw-mode" value="no-repeat" checked><span><strong>No Repeat</strong><small>Each word appears once per round.</small></span></label>
+              <label class="choice-card"><input type="radio" name="draw-mode" value="allow-repeats"><span><strong>Allow Repeats</strong><small>Every word stays eligible.</small></span></label>
+            </fieldset>
+            <fieldset>
+              <legend>Voice</legend>
+              <label class="select-label" for="voice-mode">Preferred voice</label>
+              <select id="voice-mode"><option value="auto">Auto</option><option value="ai">AI Voice</option><option value="teacher">Teacher Voice</option></select>
+              <small class="field-note">Auto safely falls back to Teacher Voice when available.</small>
+            </fieldset>
+            <fieldset>
+              <legend>Operating mode</legend>
+              <label class="select-label" for="classroom-mode">This device is used by</label>
+              <select id="classroom-mode">
+                <option value="local-teacher">Local · Teacher / whole class</option>
+                <option value="local-group">Local · Pair or small group</option>
+                <option value="live-class">Live · Teacher-led class</option>
+                <option value="live-groups">Live · Multiple groups</option>
+              </select>
+              <small class="field-note">Local modes need no Firebase session. Live modes synchronise connected displays.</small>
+              <div id="live-auth-tools" class="live-auth-tools" hidden>
+                <button id="live-sign-in" class="text-button" type="button">Teacher sign in</button>
+                <span id="live-auth-status">Sign in is required to create a live session.</span>
+              </div>
+              <label id="group-names-wrap" class="group-names-wrap" for="group-names" hidden>Group names
+                <input id="group-names" type="text" value="Group A, Group B" autocomplete="off">
+                <small>Separate up to 8 names with commas.</small>
+              </label>
+            </fieldset>
+            <fieldset>
+              <legend>Show on card</legend>
+              <div class="display-options">
+                <label><input type="checkbox" name="display" value="image" checked><span>Image</span></label>
+                <label><input type="checkbox" name="display" value="chinese" checked><span>Hanzi</span></label>
+                <label><input type="checkbox" name="display" value="pinyin" checked><span>Pinyin</span></label>
+                <label><input type="checkbox" name="display" value="english"><span>English</span></label>
+              </div>
+            </fieldset>
+          </div>
+          <p id="setup-error" class="setup-error" role="alert"></p>
+          <button id="start" class="primary-button start-button" type="button" disabled>Start Randomiser <span aria-hidden="true">→</span></button>
+        </section>
+      </div>
+    </section>
+
+    <section id="play-screen" class="play-screen" hidden>
+      <div class="park-sky" aria-hidden="true">
+        <span class="cloud cloud-one"></span><span class="cloud cloud-two"></span>
+        <span class="tree tree-left"><i></i></span><span class="tree tree-right"><i></i></span>
+        <span class="distant-hills"></span><span class="park-bushes"></span>
+      </div>
+      <div class="play-topbar">
+        <div class="play-identity"><p id="mode-label" class="eyebrow">Teacher Mode</p><h1 id="play-title">Lucky Draw</h1></div>
+        <div class="top-actions"><span id="draw-mode-chip" class="mode-chip">No Repeat</span><span id="display-chip" class="display-chip">Image + Hanzi + Pinyin</span><button id="settings" class="settings-button" type="button" aria-label="Settings">⚙</button></div>
+      </div>
+
+      <section id="live-session-bar" class="live-session-bar" aria-label="Live classroom session" hidden>
+        <div class="live-session-summary">
+          <span id="live-connection" class="connection-pill">Connecting…</span>
+          <button id="show-join-code" class="join-code-button" type="button" aria-haspopup="dialog" aria-controls="join-display-modal">Join code <strong id="live-join-code">—</strong></button>
+          <button id="show-join-qr" class="join-qr-button" type="button" aria-label="Enlarge classroom QR code" aria-haspopup="dialog" aria-controls="join-display-modal"><canvas id="join-qr" aria-hidden="true"></canvas></button>
+          <button id="copy-join-link" class="compact-button" type="button">Copy join link</button>
+          <span><strong id="connected-count">1</strong> connected</span>
+          <button id="toggle-joining" class="compact-button" type="button">Lock joining</button>
+          <button id="end-session" class="compact-button danger" type="button">End session</button>
+        </div>
+        <div class="live-control-row">
+          <label>Active group <select id="live-group-select"></select></label>
+          <label>Student controller <select id="live-device-select"><option value="">Choose a connected iPad…</option></select></label>
+          <button id="assign-group" class="compact-button" type="button">Move to active group</button>
+          <button id="delegate-control" class="compact-button accent" type="button">Allow one draw</button>
+          <button id="revoke-control" class="compact-button" type="button">Return to teacher</button>
+        </div>
+        <div id="group-overview" class="group-overview" hidden></div>
+        <p id="live-message" class="live-message" role="status"></p>
+      </section>
+
+      <div id="join-display-modal" class="join-display-modal" hidden>
+        <section id="join-display-card" class="join-display-card" role="dialog" aria-modal="true" aria-labelledby="join-display-title">
+          <button id="close-join-display" class="join-display-close" type="button" aria-label="Close enlarged join details">×</button>
+          <p class="eyebrow">Live Classroom · 在线课堂</p>
+          <h2 id="join-display-title">Join this class</h2>
+          <div class="join-display-qr"><canvas id="join-qr-large" aria-label="QR code for the student join link"></canvas></div>
+          <button id="join-display-code" class="join-display-code" type="button" aria-label="Copy class code"><span>Class code</span><strong id="join-code-large">—</strong></button>
+          <p>Scan the QR code or enter the five-character class code.</p>
+        </section>
+      </div>
+
+      <div class="play-stage">
+        <section class="lucky-zone" aria-label="Lucky Draw Box">
+          <div id="gift-box" class="sign-hanger" aria-hidden="true"><span class="sign-rope rope-left"></span><span class="sign-rope rope-right"></span></div>
+          <button id="draw" class="draw-button" type="button"><span class="draw-zh" lang="zh-Hans">点击抽取</span><span class="draw-en">Tap to Draw</span><span class="sign-stamp" aria-hidden="true"><span class="paw-image"></span></span></button>
+          <p id="pool-status" class="pool-status"></p>
+        </section>
+
+        <section id="result-card" class="result-card waiting" aria-live="polite" aria-label="Drawn vocabulary">
+          <div id="waiting-copy" class="waiting-copy"><span aria-hidden="true">✨</span><strong>Your word will appear here</strong></div>
+          <img id="result-image" alt="" hidden>
+          <div class="result-language">
+            <div id="result-chinese" class="result-chinese" lang="zh-Hans" hidden></div>
+            <div id="result-pinyin" class="result-pinyin" hidden></div>
+            <div id="result-english" class="result-english" hidden></div>
+          </div>
+          <div id="voice-actions" class="voice-actions" hidden>
+            <button id="play-preferred" class="voice-button" type="button">🔊 <span>Play voice</span></button>
+            <button id="play-teacher" class="voice-button" type="button" hidden>👩‍🏫 <span>Teacher Voice</span></button>
+          </div>
+          <p id="audio-status" class="audio-status" role="status"></p>
+        </section>
+      </div>
+
+      <section class="history-panel" aria-labelledby="history-heading">
+        <div class="history-heading"><h2 id="history-heading">Draw History</h2><span id="history-count">0 draws</span></div>
+        <ol id="history-list" class="history-list"><li class="history-empty">No words drawn yet</li></ol>
+        <button id="reset" class="history-reset" type="button"><span aria-hidden="true">↻</span><strong>Clear</strong></button>
+      </section>
+
+      <div id="complete-dialog" class="complete-dialog" role="status" hidden>
+        <div><span aria-hidden="true">🎉</span><strong>All words have been drawn</strong><small>Start a fresh round with the same vocabulary.</small></div>
+        <button id="shuffle-again" class="primary-button" type="button">Shuffle Again</button>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <span>App created by Wei Wang</span>
+    <span>The Mandarin Room © 2026</span>
+    <span>Word Randomiser v0.2 · Aug 2026</span>
+  </footer>
+  <script type="module" src="runtime-bootstrap.mjs?v=firebase-authority-1"></script>
+</body>
+</html>
