@@ -28,7 +28,7 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
 }
 ```
 
-`getSet(id)` and `getSets()` load cloud documents first and overlay them on local/seed fallback data. `watchSet(id)` and `watchSets()` provide live updates. Authorised saves write Firestore first, then update the current browser cache. Stable set and item IDs are not regenerated, so existing Teacher Voice documents remain linked.
+`getSet(id)` and `getSets()` treat the current Firebase project's Firestore documents as authoritative. `watchSet(id)` and `watchSets()` provide live updates. A project-specific browser cache is used only when a cloud read genuinely fails; cloud and packaged data are never merged. Authorised saves write Firestore first, then refresh that cache. Stable set and item IDs are not regenerated, so existing Teacher Voice documents remain linked.
 
 ## Add a vocabulary set
 
@@ -79,3 +79,9 @@ AI Voice is isolated in `js/audio.js` and currently uses browser speech synthesi
 - Planned capabilities: handwriting/stroke animation, Random Picker, Listening, Bingo, Sentence Builder, and shared Vocabulary consumption from Speaking.
 
 The repository root can be published as the standalone GitHub Pages project at `https://themandarinroom.github.io/vocabularylibrary/`.
+
+## Classroom Tools: Word Randomiser v0.2
+
+The production teacher interface is published at `https://themandarinroom.github.io/vocabularylibrary/tools/word-randomizer/`. It reads the same production `vocabularySets` and `vocabularyTeacherVoices` collections as Vocabulary Library, supports Local, teacher-led Live, delegated-student and independent-group modes, and keeps each Live Session on a stable vocabulary/audio snapshot until that session ends.
+
+Students join without accounts through `https://themandarinroom.github.io/vocabularylibrary/tools/word-randomizer/join.html`. Authoritative draws and all shared-state mutations go through the seven production callable/scheduled Functions. App Check remains non-enforcing while classroom device monitoring continues; authentication, per-device capability tokens, join rate limits and Firestore Rules remain enforced.

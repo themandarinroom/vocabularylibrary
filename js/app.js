@@ -36,7 +36,7 @@ function renderDashboard() {
 }
 
 function itemRow(item, index) {
-  const teacherAvailable = Boolean(item.audio.teacherAudioUrl);
+  const teacherAvailable = false;
   return `<article class="word-row" data-index="${index}">
     <span class="item-number">${String(index + 1).padStart(2, "0")}</span>
     <div class="word-main"><strong lang="zh-Hans">${item.chinese}</strong><span>${item.pinyin}</span></div>
@@ -63,7 +63,7 @@ function renderSet(set) {
   document.querySelectorAll(".word-row").forEach((row) => {
     const item = set.items[Number(row.dataset.index)];
     const teacherButton = row.querySelector(".teacher-button");
-    let teacherVoiceUrl = item.audio.teacherAudioUrl || "";
+    let teacherVoiceUrl = "";
     const updateTeacherButton = (url) => {
       teacherVoiceUrl = url || "";
       teacherButton.disabled = !teacherVoiceUrl;

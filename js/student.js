@@ -51,7 +51,7 @@ if (!set) {
     $("#position").textContent = `${currentIndex + 1} / ${set.items.length}`;
     $("#previous").disabled = currentIndex === 0; $("#next").disabled = currentIndex === set.items.length - 1;
     $("#ai-voice").hidden = !item.audio.aiEnabled; $("#ai-voice").disabled = !canUseAiVoice();
-    setTeacherVoiceAvailability(item.audio.teacherAudioUrl || "");
+    setTeacherVoiceAvailability("");
     const request = ++voiceRequest;
     if (unsubscribeTeacherVoice) { unsubscribeTeacherVoice(); unsubscribeTeacherVoice = null; }
     watchTeacherVoice(set.id, item.id, (metadata) => { if (request !== voiceRequest) return; setTeacherVoiceAvailability(cacheSafeAudioUrl(metadata)); }, (error) => { console.error("[Vocabulary Teacher Voice]", error); }).then((unsubscribe) => { if (request === voiceRequest) unsubscribeTeacherVoice = unsubscribe; else unsubscribe(); }).catch((error) => console.error("[Vocabulary Teacher Voice]", error));

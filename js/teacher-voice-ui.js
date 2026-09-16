@@ -23,7 +23,12 @@ export async function initialiseTeacherVoiceAuth(setIdGetter, onAuthChange = () 
   try {
     const services = await getFirebaseServices();
     signIn.addEventListener("click", async () => {
-      try { await services.authSdk.signInWithPopup(services.auth, new services.authSdk.GoogleAuthProvider()); }
+      try {
+        const provider = new services.authSdk.GoogleAuthProvider();
+        const stagingPages = services.app.options.projectId === "the-mandarin-room-staging" && location.hostname === "themandarinroom.github.io";
+        if (stagingPages) await services.authSdk.signInWithRedirect(services.auth, provider);
+        else await services.authSdk.signInWithPopup(services.auth, provider);
+      }
       catch (error) {
         const code = error?.code || "auth/unknown";
         const message = error?.message || String(error);

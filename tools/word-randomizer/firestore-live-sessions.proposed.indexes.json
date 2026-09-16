@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "deviceSecrets",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "connected", "order": "ASCENDING" },
+        { "fieldPath": "lastSeenAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
