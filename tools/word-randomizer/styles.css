@@ -66,3 +66,5 @@ body:has(.play-screen:not([hidden])) .site-footer { display:none; }
 /* The Mandarin Room shared header bar (Word Randomiser). Display is left to the rules above so the header still hides during play. */
 .tool-header { max-width:none; width:100%; margin:0; min-height:84px; padding:max(12px,env(safe-area-inset-top)) max(3.6vw,20px) 12px; background:#fff; box-shadow:var(--tmr-shadow-header,0 3px 14px #14223908); position:relative; z-index:2; }
 @media (max-width:700px) { .tool-header { padding:max(12px,env(safe-area-inset-top)) 18px 12px; } }
+/* Official emblem on the student join card (replaces the 中文 tile). */
+.student-join-card .join-emblem { display:block; width:56px; height:auto; margin-bottom:18px; }
