@@ -1,3 +1,5 @@
+@import url("../../css/tmr-tokens.css?v=1");
+@import url("../../css/tmr-brand.css?v=1");
 :root { --ink:#173d38; --deep:#176a5a; --green:#2b9c72; --leaf:#84c95e; --yellow:#ffd85a; --orange:#f59c52; --pink:#ef7c75; --sky:#dff6ff; --cream:#fffaf0; --paper:#fffdf8; --line:#dce7dc; --shadow:0 16px 42px rgba(27,80,67,.12); }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
@@ -61,3 +63,6 @@ body:has(.play-screen:not([hidden])) .site-footer { display:none; }
 @keyframes waiting-box { 0%,100% { transform:translateY(0) rotate(-1deg); } 50% { transform:translateY(-8px) rotate(1deg); } } @keyframes waiting-dot { 0%,60%,100% { transform:translateY(0); opacity:.45; } 30% { transform:translateY(-7px); opacity:1; } }
 @media (prefers-reduced-motion:reduce) { .student-waiting .waiting-draw-box,.waiting-dots i { animation:none; } }
 @media (max-width:660px) { .student-join-card { width:calc(100% - 24px); padding:24px 20px; }.student-join-card #student-code { letter-spacing:.16em; font-size:23px; }.student-session { align-content:space-between; gap:10px; }.student-session>.result-card { min-height:55vh; }.student-statusbar>strong { font-size:15px; }.student-draw-button { min-height:86px; }.student-draw-button strong { font-size:24px; }.student-draw-button .paw-image { right:18px; width:35px; height:33px; }.student-waiting .waiting-draw-box { width:126px; height:96px; margin-bottom:16px; }.student-waiting small { font-size:12px; } }
+/* The Mandarin Room shared header bar (Word Randomiser). Display is left to the rules above so the header still hides during play. */
+.tool-header { max-width:none; width:100%; margin:0; min-height:84px; padding:max(12px,env(safe-area-inset-top)) max(3.6vw,20px) 12px; background:#fff; box-shadow:var(--tmr-shadow-header,0 3px 14px #14223908); position:relative; z-index:2; }
+@media (max-width:700px) { .tool-header { padding:max(12px,env(safe-area-inset-top)) 18px 12px; } }
