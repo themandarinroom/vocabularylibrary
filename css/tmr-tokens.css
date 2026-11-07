@@ -1,0 +1,47 @@
+/* The Mandarin Room design tokens v1.
+   Source of truth: the Unified Website. Each app keeps its own copy of this
+   file (no cross-site loading). Only custom properties live here. */
+:root{
+  /* Page and text */
+  --tmr-page:#ffffff;
+  --tmr-ink:#0c193b;
+  --tmr-muted:#617797;
+  --tmr-line:#e7edf0;
+
+  /* Brand and actions */
+  --tmr-green:#27875b;
+  --tmr-green-soft:#e2f0e9;
+  --tmr-green-icon:#138452;
+
+  /* Card pastels */
+  --tmr-pink:#fff0f5;
+  --tmr-peach:#fff2e8;
+  --tmr-yellow:#fff9e1;
+  --tmr-mint:#eaf9f1;
+  --tmr-aqua:#e6f8fa;
+  --tmr-blue:#eaf5ff;
+  --tmr-lavender:#f2edff;
+
+  /* Year levels: background / text */
+  --tmr-year-0-bg:#ffe8f0;--tmr-year-0:#c32f68;
+  --tmr-year-1-bg:#fff0e3;--tmr-year-1:#b65500;
+  --tmr-year-2-bg:#fff8d9;--tmr-year-2:#946500;
+  --tmr-year-3-bg:#e5f6ed;--tmr-year-3:#168449;
+  --tmr-year-4-bg:#dff7f9;--tmr-year-4:#087d8c;
+  --tmr-year-5-bg:#e5f0ff;--tmr-year-5:#0868d3;
+  --tmr-year-6-bg:#efe8ff;--tmr-year-6:#7b42d0;
+
+  /* Typography */
+  --tmr-font-ui:"Avenir Next",Avenir,"Segoe UI",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+  --tmr-font-chinese:KaiTi,STKaiti,"Kaiti SC","Songti SC",serif;
+
+  /* Shape */
+  --tmr-radius-button:10px;
+  --tmr-radius-card:16px;
+  --tmr-shadow-header:0 3px 14px #14223908;
+  --tmr-control-height:44px;
+
+  /* Header */
+  --tmr-header-logo:56px;
+  --tmr-header-logo-small:44px;
+}

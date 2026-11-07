@@ -1,0 +1,26 @@
+/* The Mandarin Room shared header brand v1.
+   Copied unchanged into each app; requires tmr-tokens.css.
+   Markup:
+   <div class="tmr-brand">
+     <a class="tmr-emblem-link" href="HOME" tabindex="-1" aria-hidden="true"><img class="tmr-emblem" src="…/emblem-header.png" width="56" height="53" alt=""></a>
+     <span class="tmr-brand-text">
+       <a class="tmr-home-link" href="HOME">The Mandarin Room</a>
+       <a class="tmr-app-link" href="APP">App name</a>
+     </span>
+   </div>
+   HOME = The Mandarin Room homepage; APP = this app's own home. */
+.tmr-brand{display:flex;align-items:center;gap:14px;flex-shrink:0;min-width:0}
+.tmr-emblem-link{display:block;flex-shrink:0;line-height:0}
+.tmr-emblem{display:block;width:var(--tmr-header-logo,56px);height:auto}
+.tmr-brand-text{display:flex;flex-direction:column;min-width:0}
+.tmr-home-link,.tmr-app-link{color:var(--tmr-ink,#0c193b);text-decoration:none;font-family:var(--tmr-font-ui,"Avenir Next",Avenir,"Segoe UI",Arial,sans-serif)}
+.tmr-home-link{font-size:22px;font-weight:650;letter-spacing:-.5px;line-height:1.2}
+.tmr-app-link{margin-top:2px;color:var(--tmr-muted,#617797);font-size:14px;font-weight:550;line-height:1.3}
+.tmr-home-link:hover,.tmr-app-link:hover{text-decoration:underline;text-underline-offset:3px}
+.tmr-emblem-link:focus-visible,.tmr-home-link:focus-visible,.tmr-app-link:focus-visible{outline:3px solid #216daf;outline-offset:3px;border-radius:4px}
+@media (max-width:700px){
+  .tmr-brand{gap:11px}
+  .tmr-emblem{width:var(--tmr-header-logo-small,44px)}
+  .tmr-home-link{font-size:19px}
+  .tmr-app-link{font-size:13px}
+}
