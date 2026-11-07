@@ -82,5 +82,5 @@ test('student Unit publication — emulator-only synthetic records',async t=>{
   const data=input();data.student.lessons=lessons.map(lesson=>selection(lesson.id,{includeLearningIntention:true,content:'文'.repeat(5000),workedExampleIds:examples.map(example=>example.id)}));
   await rejects(publish(data),'invalid-argument');assert.equal(await get('publicUnits/'+source.id),undefined);
  });
- await t.test('publication backend refuses production and unknown projects',()=>{for(const projectId of ['the-mandarin-room','','other-staging'])assert.throws(()=>createPublicUnitHandlers({db,projectId}),/explicit staging/);});
+ await t.test('publication backend refuses unknown projects',()=>{for(const projectId of ['the-mandarin-room-prod','','other-staging'])assert.throws(()=>createPublicUnitHandlers({db,projectId}),/staging or production/);});
 });

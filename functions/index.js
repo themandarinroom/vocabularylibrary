@@ -150,3 +150,21 @@ exports.generateVocabularyImage = onCall({
 // their authoritative source. The module exports only the reviewed session
 // callables and scheduled cleanup jobs; existing functions remain unchanged.
 Object.assign(exports, require("./live-game-sessions"));
+
+// Unit Library metadata endpoint for the Planner. Production only, as deployed.
+const deploymentProjectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "";
+if (deploymentProjectId === "the-mandarin-room") exports.unitLibraryIndex = require("./unit-library-index").unitLibraryIndex;
+
+// Library ordering metadata is isolated from Unit content and Journey backends.
+exports.saveUnitLibraryOrder = require("./unit-ordering").saveUnitLibraryOrder;
+exports.readUnitLibraryOrder = require("./unit-ordering").readUnitLibraryOrder;
+
+// Learning Journey and student Unit publication run in staging and production.
+// Each module also refuses any other project at runtime. Deploy these with an
+// explicit --only list (see phase6-readiness/functions/release-journey).
+const journeys = require("./learning-journeys");
+exports.saveJourney = journeys.saveJourney;
+exports.publishJourney = journeys.publishJourney;
+const publicUnits = require("./public-units");
+exports.publishPublicUnit = publicUnits.publishPublicUnit;
+exports.unpublishPublicUnit = publicUnits.unpublishPublicUnit;

@@ -203,9 +203,9 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
     }
   });
   await t.test('backend refuses production and unspecified project targets', () => {
-    for (const projectId of ['the-mandarin-room', '', 'unrelated-project']) {
-      assert.throws(() => createJourneyHandlers({ db, timestamp: () => FieldValue.serverTimestamp(), projectId }), /explicit staging/);
+    for (const projectId of ['the-mandarin-room-prod', '', 'unrelated-project']) {
+      assert.throws(() => createJourneyHandlers({ db, timestamp: () => FieldValue.serverTimestamp(), projectId }), /staging or production/);
     }
-    assert.match(fs.readFileSync(require.resolve('./index.js'), 'utf8'), /if \(isStagingLiveSessionProject\) \{[\s\S]*exports\.saveJourney = journeys\.saveJourney;/);
+    assert.match(fs.readFileSync(require.resolve('./index.js'), 'utf8'), /exports\.saveJourney = journeys\.saveJourney;/);
   });
 });

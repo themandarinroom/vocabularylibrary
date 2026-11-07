@@ -1,4 +1,4 @@
-// Staging-only, explicit student publication. Original Unit documents are read,
+// Explicit student publication (staging and production). Original Unit documents are read,
 // never changed. This module does not publish anything when it is loaded.
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getApp } = require('firebase-admin/app');
@@ -71,7 +71,7 @@ function projection(unit, input) {
 }
 function createPublicUnitHandlers({ db, projectId }) {
   const demo = /^demo-[a-z0-9-]+$/.test(projectId || '') && /^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST || '');
-  if (projectId !== 'the-mandarin-room-staging' && !demo) throw new Error('Public Unit publication requires the explicit staging project.');
+  if (!['the-mandarin-room-staging', 'the-mandarin-room'].includes(projectId) && !demo) throw new Error('Public Unit publication requires the staging or production project.');
   function identity(request) {
     if (!request.auth?.uid) fail('unauthenticated', 'Teacher sign-in is required.');
     if (request.auth.token?.email_verified !== true) fail('permission-denied', 'A verified teacher email is required.');

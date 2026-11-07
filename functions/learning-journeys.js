@@ -1,9 +1,9 @@
-// Staging-only Journey configuration. No Unit content is copied or modified.
+// Journey configuration for staging and production. No Unit content is copied or modified.
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getApp } = require('firebase-admin/app');
 
-const STAGING_PROJECT = 'the-mandarin-room-staging';
+const ALLOWED_PROJECTS = new Set(['the-mandarin-room-staging', 'the-mandarin-room']);
 const STATUS = new Set(['completed', 'current', 'upcoming']);
 const fail = (code, message) => { throw new HttpsError(code, message); };
 const gradeKey = year => year === 0 ? 'prep' : `year-${year}`;
@@ -46,7 +46,7 @@ function createJourneyHandlers({ db, timestamp, projectId }) {
   // Tests can use only a local demo project. Never fall back to production.
   const localDemo = /^demo-[a-z0-9-]+$/.test(projectId || '') &&
     /^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST || '');
-  if (projectId !== STAGING_PROJECT && !localDemo) throw new Error('Learning Journey requires the explicit staging Firebase project.');
+  if (!ALLOWED_PROJECTS.has(projectId) && !localDemo) throw new Error('Learning Journey requires the staging or production Firebase project.');
 
   function requireIdentity(request) {
     if (!request.auth?.uid) fail('unauthenticated', 'Teacher sign-in is required.');
@@ -97,7 +97,7 @@ function createJourneyHandlers({ db, timestamp, projectId }) {
         }
         validatePlacements(draft.placements);
         // Upcoming entries expose no Unit reference. All exposed references must
-        // already have an explicitly approved public read model in staging.
+        // already have an explicitly approved public read model in this project.
         const visible = draft.placements.filter(placement => placement.status !== 'upcoming');
         const approved = await Promise.all(visible.map(({ unitId }) => transaction.get(db.doc(`publicUnits/${unitId}`))));
         if (approved.some((snapshot, index) => !snapshot.exists || snapshot.data().id !== visible[index].unitId ||
