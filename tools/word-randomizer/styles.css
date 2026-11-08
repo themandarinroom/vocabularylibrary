@@ -1,10 +1,10 @@
 @import url("../../css/tmr-tokens.css?v=1");
 @import url("../../css/tmr-brand.css?v=1");
-:root { --ink:#173d38; --deep:#176a5a; --green:#2b9c72; --leaf:#84c95e; --yellow:#ffd85a; --orange:#f59c52; --pink:#ef7c75; --sky:#dff6ff; --cream:#fffaf0; --paper:#fff; --line:#dce7dc; --shadow:0 16px 42px rgba(27,80,67,.12); }
+:root { --ink:var(--tmr-ink,#0c193b); --deep:var(--tmr-green,#27875b); --green:#2b9c72; --leaf:#84c95e; --yellow:#ffd85a; --orange:#f59c52; --pink:#ef7c75; --sky:#dff6ff; --cream:#fffaf0; --paper:#fff; --line:var(--tmr-line,#e7edf0); --shadow:0 16px 42px rgba(27,80,67,.12); }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
 html { color-scheme:light; }
-body { margin:0; min-height:100vh; background:#fff; color:var(--ink); font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+body { margin:0; min-height:100vh; background:#fff; color:var(--ink); font-family:var(--tmr-font-ui,"Avenir Next",Avenir,"Segoe UI",Arial,"PingFang SC","Microsoft YaHei",sans-serif); }
 button,input,select { font:inherit; }
 button,a,label,select { -webkit-tap-highlight-color:transparent; }
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:4px solid #ffbd3e; outline-offset:3px; }
