@@ -27,7 +27,7 @@ function buildUnitLibraryIndex(units, generatedAt = new Date().toISOString()) {
       title: String(unit.englishTitle || unit.title || unit.id),
       url: unitLibraryUrl(String(unit.id)),
       lessons: (Array.isArray(unit.lessons) ? unit.lessons : [])
-        .filter((lesson) => lesson && String(lesson.id || "").trim())
+        .filter((lesson) => lesson && lesson.teacherOnly !== true && String(lesson.id || "").trim())
         .map((lesson) => ({
           id: String(lesson.id),
           title: String(lesson.title || lesson.id),

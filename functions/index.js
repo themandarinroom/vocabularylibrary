@@ -165,6 +165,7 @@ exports.readUnitLibraryOrder = require("./unit-ordering").readUnitLibraryOrder;
 const journeys = require("./learning-journeys");
 exports.saveJourney = journeys.saveJourney;
 exports.publishJourney = journeys.publishJourney;
+exports.setActiveAcademicYear = journeys.setActiveAcademicYear;
 const publicUnits = require("./public-units");
 exports.publishPublicUnit = publicUnits.publishPublicUnit;
 exports.unpublishPublicUnit = publicUnits.unpublishPublicUnit;

@@ -56,18 +56,27 @@ function projection(unit, input) {
     });
     if (selection.includeVocabulary) links.unshift({ label: 'Vocabulary', url: `https://themandarinroom.github.io/vocabularylibrary/?set=${encodeURIComponent(stableId(source.vocabularySetId))}` });
     if (selection.includeSpeaking) links.push({ label: 'Speaking', url: `https://themandarinroom.github.io/speaking/student.html?practice=${encodeURIComponent(stableId(source.speakingPracticeId))}` });
-    const workedExamples = uniqueList(selection.workedExampleIds, 12).map(id => {
-      stableId(id, 100);
-      const example = (source.workedExamples || []).find(item => item.id === id);
-      if (!example) fail('invalid-argument', 'A selected worked example is not in the source lesson.');
-      return { url: publicUrl(example.url), alt: text(example.alt || '', 300) };
-    });
+    // Worked Examples are teacher-only resources: they can never be selected for students.
+    if (!Array.isArray(selection.workedExampleIds) || selection.workedExampleIds.length) fail('invalid-argument', 'Worked Examples are teacher-only and cannot be published.');
+    // Lessons marked teacher-only in the Unit Library (for example assessments) are never published.
+    if (source.teacherOnly === true) fail('failed-precondition', `“${source.title}” is a teacher-only lesson and cannot be published.`);
     return { id: selection.id, title: text(source.title, 120, true),
       learningIntention: selection.includeLearningIntention ? text(source.learningIntention || '', 1000) : '',
-      content: text(selection.content, 5000), links, workedExamples };
+      content: text(selection.content, 5000), links };
   });
   return { yearLevel: unit.yearLevel, englishTitle: text(unit.englishTitle, 100, true), chineseTitle: text(unit.chineseTitle || '', 100),
     description: text(input.description, 1000), topics: [...topics], lessons };
+}
+// Vocabulary Sets and Speaking Practices linked by the approved lessons. Any year level is allowed:
+// a Year 6 lesson may reuse a Year 2 set. Only existence and student availability are checked.
+function linkedReferences(unit, input) {
+  const vocabulary = new Set(), speaking = new Set();
+  for (const selection of input.lessons) {
+    const source = unit.lessons.find(lesson => lesson.id === selection.id);
+    if (selection.includeVocabulary) vocabulary.add(source.vocabularySetId);
+    if (selection.includeSpeaking) speaking.add(source.speakingPracticeId);
+  }
+  return { vocabulary: [...vocabulary], speaking: [...speaking] };
 }
 function createPublicUnitHandlers({ db, projectId }) {
   const demo = /^demo-[a-z0-9-]+$/.test(projectId || '') && /^(127\.0\.0\.1|localhost):\d+$/.test(process.env.FIRESTORE_EMULATOR_HOST || '');
@@ -102,6 +111,12 @@ function createPublicUnitHandlers({ db, projectId }) {
         if (sourceVersion(source.data()) !== input.sourceVersion) fail('aborted', 'Source Unit changed. Review it again before approving.');
         const nextRevision = revision(previous, input.expectedRevision);
         const safe = projection(source.data(), input.student);
+        const linked = linkedReferences(source.data(), input.student);
+        const [sets, practices] = await Promise.all([
+          Promise.all(linked.vocabulary.map(id => tx.get(db.doc(`vocabularySets/${id}`)))),
+          Promise.all(linked.speaking.map(id => tx.get(db.doc(`speakingPractices/${id}`))))]);
+        sets.forEach((set, i) => { if (!set.exists || set.data().published !== true || set.data().deleted === true) fail('failed-precondition', `Vocabulary Set “${linked.vocabulary[i]}” is not available to students.`); });
+        practices.forEach((practice, i) => { if (!practice.exists || practice.data().deleted !== false) fail('failed-precondition', `Speaking Practice “${linked.speaking[i]}” is not available to students.`); });
         if (Buffer.byteLength(JSON.stringify(safe), 'utf8') > 900000) fail('invalid-argument', 'Approved student content exceeds the safe document size.');
         tx.set(ref, { id: input.unitId, schemaVersion: 1, ...safe, published: true, approvedForStudents: true, revision: nextRevision });
         return { unitId: input.unitId, revision: nextRevision, published: true };

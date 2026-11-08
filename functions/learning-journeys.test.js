@@ -18,6 +18,8 @@ const saveInput = (overrides = {}) => ({ academicYear: 2026, yearLevel: 5, place
 const publishInput = (overrides = {}) => ({ academicYear: 2026, yearLevel: 5, expectedRevision: 1, ...overrides });
 const save = (data = saveInput(), auth = teacher) => handlers.saveJourney({ data, auth });
 const publish = (data = publishInput(), auth = teacher) => handlers.publishJourney({ data, auth });
+const setYear = (academicYear, expectedRevision, auth = teacher) => handlers.setActiveAcademicYear({ data: { academicYear, expectedRevision }, auth });
+const activate = async (academicYear = 2026) => { const config = await get('journeyConfig/public'); return setYear(academicYear, config ? config.revision : 0); };
 const get = async path => (await db.doc(path).get()).data();
 const rejectsCode = (promise, code) => assert.rejects(promise, error => error.code === code);
 
@@ -49,6 +51,7 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
     for (const id of ['synthetic-unit-a', 'synthetic-unit-b']) {
       await db.doc(`publicUnits/${id}`).set({ id, schemaVersion: 1, published: true, approvedForStudents: true, recommendedYearLevel: 2 });
     }
+    await activate(2026);
   });
   t.after(async () => { try { await reset(); } finally { await db.terminate(); await deleteApp(app); } });
 
@@ -147,10 +150,10 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
     await publish(publishInput({ yearLevel: 3 }));
     const firstYear = await get('learningJourneys/2026_year-5');
     const otherGrade = await get('journeySettings/year-3');
-    await publish(publishInput({ academicYear: 2027 }));
+    assert.equal((await publish(publishInput({ academicYear: 2027 }))).active, false);
     assert.deepEqual(await get('learningJourneys/2026_year-5'), firstYear);
     assert.deepEqual(await get('journeySettings/year-3'), otherGrade);
-    assert.equal((await get('journeySettings/year-5')).journeyId, '2027_year-5');
+    assert.equal((await get('journeySettings/year-5')).journeyId, '2026_year-5', 'publishing 2027 never switches the public year');
   });
   await t.test('empty Journeys and Prep are valid configurations', async () => {
     await save(saveInput({ yearLevel: 0, placements: [] }));
@@ -167,6 +170,9 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
     }
     await save(saveInput({ academicYear: 2027 }));
     await publish(publishInput({ academicYear: 2027 }));
+    assert.equal((await rest('publishedJourneys/2026_year-5')).status, 200, '2026 stays public');
+    assert.equal((await rest('publishedJourneys/2027_year-5')).status, 403, 'published 2027 is not public before activation');
+    await activate(2027);
     assert.equal((await rest('publishedJourneys/2026_year-5')).status, 403);
     assert.equal((await rest('publishedJourneys/2027_year-5')).status, 200);
     assert.equal((await rest('publishedJourneys/2026_year-5', { auth: teacher })).status, 200);
@@ -182,7 +188,7 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
   });
   await t.test('even authorised teachers cannot directly create, update or delete Journey documents', async () => {
     await save(); await publish();
-    for (const path of ['learningJourneys/2026_year-5', 'journeySettings/year-5', 'publishedJourneys/2026_year-5']) {
+    for (const path of ['learningJourneys/2026_year-5', 'journeySettings/year-5', 'publishedJourneys/2026_year-5', 'journeyConfig/public']) {
       for (const auth of [null, teacher]) {
         assert.equal((await rest(path, { auth, method: 'PATCH', body: { fields: { revision: { integerValue: '999' } } } })).status, 403);
         assert.equal((await rest(path, { auth, method: 'DELETE' })).status, 403);
@@ -201,6 +207,58 @@ test('Learning Journey secure foundation — local synthetic records only', asyn
       assert.equal((await rest('units/synthetic-unit', { auth })).status, auth ? 200 : 403);
       assert.equal((await rest('units', { auth })).status, auth ? 200 : 403);
     }
+  });
+  await t.test('academic year: 2026 and 2027 are stored separately; preparing 2027 never touches public 2026', async () => {
+    await save(saveInput({ placements: [placement('synthetic-unit-a', 'current')] })); await publish();
+    const public2026 = await get('publishedJourneys/2026_year-5'), pointer2026 = await get('journeySettings/year-5');
+    await save(saveInput({ academicYear: 2027, placements: [placement('synthetic-unit-b', 'current'), placement('future-private-unit', 'upcoming')] }));
+    const result = await publish(publishInput({ academicYear: 2027 }));
+    assert.deepEqual([result.active, result.activeAcademicYear], [false, 2026]);
+    assert.deepEqual(await get('publishedJourneys/2026_year-5'), public2026);
+    assert.deepEqual(await get('journeySettings/year-5'), pointer2026);
+    assert.equal((await rest('publishedJourneys/2027_year-5')).status, 403);
+    assert.equal((await rest('learningJourneys/2027_year-5')).status, 403);
+    assert.equal((await get('learningJourneys/2026_year-5')).placements[0].unitId, 'synthetic-unit-a', '2026 history preserved');
+  });
+  await t.test('academic year: switching repoints every year level, hides years without a Journey, and rolls back exactly', async () => {
+    await save(); await publish();                                                // 2026 Year 5 live
+    await save(saveInput({ yearLevel: 0, placements: [] })); await publish(publishInput({ yearLevel: 0 }));   // 2026 Prep live
+    await save(saveInput({ academicYear: 2027 })); await publish(publishInput({ academicYear: 2027 }));      // 2027 Year 5 prepared only
+    const before = await Promise.all(['journeySettings/year-5', 'journeySettings/prep'].map(get));
+    const switched = await activate(2027);
+    assert.deepEqual(switched, { activeAcademicYear: 2027, revision: 2, liveYearLevels: [5] });
+    assert.equal((await get('journeySettings/year-5')).journeyId, '2027_year-5');
+    assert.equal(await get('journeySettings/prep'), undefined, 'no 2027 Prep Journey: students see the fallback, never 2026 content');
+    assert.equal((await rest('journeySettings/prep')).status, 404);
+    assert.deepEqual(await get('journeyConfig/public'), { ...(await get('journeyConfig/public')), activeAcademicYear: 2027, previousAcademicYear: 2026 });
+    const rolledBack = await activate(2026);
+    assert.deepEqual(rolledBack.liveYearLevels, [0, 5]);
+    const after = await Promise.all(['journeySettings/year-5', 'journeySettings/prep'].map(get));
+    assert.deepEqual(after.map(p => [p.journeyId, p.revision]), before.map(p => [p.journeyId, p.revision]), 'rollback restores the exact 2026 publications');
+    assert.equal((await rest('publishedJourneys/2026_year-5')).status, 200);
+    assert.equal((await rest('publishedJourneys/2027_year-5')).status, 403);
+  });
+  await t.test('academic year: only verified active teachers can switch; stale and malformed switches are refused', async () => {
+    for (const auth of [null, stranger, { uid: teacher.uid, token: { email_verified: false } }, { uid: 'synthetic-inactive', token: { email_verified: true } }]) {
+      await rejectsCode(setYear(2027, 1, auth), auth ? 'permission-denied' : 'unauthenticated');
+    }
+    await rejectsCode(setYear(2027, 0), 'aborted');
+    for (const data of [{ academicYear: 1999, expectedRevision: 1 }, { academicYear: '2027', expectedRevision: 1 }, { academicYear: 2027 }, { academicYear: 2027, expectedRevision: 1, force: true }]) {
+      await rejectsCode(handlers.setActiveAcademicYear({ data, auth: teacher }), 'invalid-argument');
+    }
+    const concurrent = await Promise.allSettled([setYear(2027, 1), setYear(2028, 1)]);
+    assert.equal(concurrent.filter(r => r.status === 'fulfilled').length, 1);
+    assert.equal((await get('journeyConfig/public')).revision, 2);
+  });
+  await t.test('academic year: publishing requires an explicit active year; the config is teacher-read-only', async () => {
+    await db.doc('journeyConfig/public').delete();
+    await save();
+    await rejectsCode(publish(), 'failed-precondition');
+    assert.equal(await get('publishedJourneys/2026_year-5'), undefined);
+    await activate(2026);
+    assert.equal((await rest('journeyConfig/public')).status, 403);
+    assert.equal((await rest('journeyConfig/public', { auth: teacher })).status, 200);
+    assert.equal((await rest('journeyConfig/public', { auth: stranger })).status, 403);
   });
   await t.test('backend refuses production and unspecified project targets', () => {
     for (const projectId of ['the-mandarin-room-prod', '', 'unrelated-project']) {

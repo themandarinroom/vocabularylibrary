@@ -21,17 +21,17 @@ function token(auth){const now=Math.floor(Date.now()/1000);return [{alg:'none',t
 async function rest(path,{auth,method='GET',body}={}){return fetch(`http://${host}/v1/projects/${PROJECT}/databases/(default)/documents${path.startsWith(':')?'':'/'}${path}`,{method,headers:{...(auth?{Authorization:`Bearer ${token(auth)}`}:{ }),'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});}
 async function reset(){assert.equal((await fetch(`http://${host}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`,{method:'DELETE'})).status,200);}
 test('student Unit publication — emulator-only synthetic records',async t=>{
- t.beforeEach(async()=>{await reset();await db.doc('authorizedTeachers/'+teacher.uid).set({active:true});await db.doc('authorizedTeachers/synthetic-inactive').set({active:false});await db.doc('units/'+source.id).set(source);});
+ t.beforeEach(async()=>{await reset();await db.doc('authorizedTeachers/'+teacher.uid).set({active:true});await db.doc('authorizedTeachers/synthetic-inactive').set({active:false});await db.doc('units/'+source.id).set(source);await db.doc('vocabularySets/synthetic-words').set({published:true,yearLevel:2});await db.doc('speakingPractices/synthetic-speaking').set({deleted:false,yearLevelId:'year-2'});});
  t.after(async()=>{try{await reset();}finally{await db.terminate();await deleteApp(app);}});
  await t.test('explicit approval publishes only safe fields and preserves lesson order and the original Unit',async()=>{
   const original=await get('units/'+source.id);assert.equal((await publish()).revision,1);const doc=await get('publicUnits/'+source.id);
-  assert.deepEqual(doc.lessons.map(l=>l.id),['lesson-a','lesson-b']);assert.equal(doc.yearLevel,4);assert.equal(doc.lessons[0].learningIntention,'');assert.deepEqual(doc.lessons[0].links,[]);assert.deepEqual(doc.lessons[0].workedExamples,[]);
+  assert.deepEqual(doc.lessons.map(l=>l.id),['lesson-a','lesson-b']);assert.equal(doc.yearLevel,4);assert.equal(doc.lessons[0].learningIntention,'');assert.deepEqual(doc.lessons[0].links,[]);assert.equal('workedExamples' in doc.lessons[0],false);
   assert.deepEqual(await get('units/'+source.id),original);
   for(const privateValue of ['PRIVATE','DO NOT EXPOSE','updatedBy','privatePlanning','storagePath','sourceVersion','private-admin','notes','private-planning'])assert(!JSON.stringify(doc).includes(privateValue));
   assert.deepEqual(Object.keys(doc).sort(),['id','schemaVersion','yearLevel','englishTitle','chineseTitle','description','topics','lessons','published','approvedForStudents','revision'].sort());
  });
  await t.test('optional learning fields, resources and worked examples require individual selection',async()=>{
-  const data=input();data.student.lessons=[selection('lesson-a',{includeLearningIntention:true,includeVocabulary:true,includeSpeaking:true,resourceUrls:['https://example.org/public-worksheet'],workedExampleIds:['example-a']})];await publish(data);const lesson=(await get('publicUnits/'+source.id)).lessons[0];assert.equal(lesson.learningIntention,'Name two animals.');assert.equal(lesson.links.length,3);assert.deepEqual(lesson.workedExamples,[{url:'https://example.org/approved.png',alt:'An animal diagram'}]);assert(!JSON.stringify(lesson).includes('private-planning'));
+  const data=input();data.student.lessons=[selection('lesson-a',{includeLearningIntention:true,includeVocabulary:true,includeSpeaking:true,resourceUrls:['https://example.org/public-worksheet']})];await publish(data);const lesson=(await get('publicUnits/'+source.id)).lessons[0];assert.equal(lesson.learningIntention,'Name two animals.');assert.equal(lesson.links.length,3);assert.equal('workedExamples' in lesson,false);for(const hidden of ['private-planning','approved.png','example-a','An animal diagram'])assert(!JSON.stringify(lesson).includes(hidden));
  });
  await t.test('anonymous, unverified, inactive and unlisted callers cannot publish or unpublish',async()=>{
   for(const auth of [null,stranger,{...teacher,token:{email_verified:false}},{uid:'synthetic-inactive',token:{email_verified:true}}]){const code=auth?'permission-denied':'unauthenticated';await rejects(publish(input(),auth),code);await rejects(unpublish(undefined,auth),code);}assert.equal(await get('publicUnits/'+source.id),undefined);
@@ -52,11 +52,11 @@ test('student Unit publication — emulator-only synthetic records',async t=>{
   await publish();const next=input({expectedRevision:1});next.student.description='Updated approved description.';assert.equal((await publish(next)).revision,2);assert.equal((await unpublish({unitId:source.id,expectedRevision:2})).revision,3);assert.deepEqual(await get('publicUnits/'+source.id),{id:source.id,schemaVersion:1,revision:3,published:false,approvedForStudents:false});assert.deepEqual(await get('units/'+source.id),source);assert.equal((await rest('publicUnits/'+source.id)).status,403);assert.equal((await publish(input({expectedRevision:3}))).revision,4);
  });
  await t.test('invalid IDs, topics, duplicates, ordering, text limits and guessed resource references are rejected',async()=>{
-  for(const change of [d=>d.unitId='../bad',d=>d.expectedRevision=-1,d=>d.student.topics=[],d=>d.student.topics=['unknown'],d=>d.student.lessons.reverse(),d=>d.student.lessons.push(selection()),d=>d.student.lessons[0].resourceUrls=['https://example.org/not-in-source'],d=>d.student.lessons[0].workedExampleIds=['missing'],d=>d.student.lessons[0].content='x'.repeat(5001)]){const data=input();change(data);await rejects(publish(data),'invalid-argument');}
+  for(const change of [d=>d.unitId='../bad',d=>d.expectedRevision=-1,d=>d.student.topics=[],d=>d.student.topics=['unknown'],d=>d.student.lessons.reverse(),d=>d.student.lessons.push(selection()),d=>d.student.lessons[0].resourceUrls=['https://example.org/not-in-source'],d=>d.student.lessons[0].workedExampleIds=['missing'],d=>d.student.lessons[0].workedExampleIds=['example-a'],d=>delete d.student.lessons[0].workedExampleIds,d=>d.student.lessons[0].content='x'.repeat(5001)]){const data=input();change(data);await rejects(publish(data),'invalid-argument');}
  });
  await t.test('unsafe resource and worked-example URLs cannot be published even if present in the source',async()=>{
   await db.doc('units/'+source.id).update({'lessons':[{...source.lessons[0],resources:'javascript:alert(1)',workedExamples:[{id:'example-a',url:'http://insecure.example/image.png'}]}]});
-  const data=input();data.student.lessons=[selection('lesson-a',{resourceUrls:['javascript:alert(1)']})];await rejects(publish(data),'invalid-argument');data.student.lessons=[selection('lesson-a',{workedExampleIds:['example-a']})];await rejects(publish(data),'invalid-argument');
+  const data=input();data.student.lessons=[selection('lesson-a',{resourceUrls:['javascript:alert(1)']})];await rejects(publish(data),'invalid-argument');data.student.lessons=[selection('lesson-a',{workedExampleIds:['example-a']})];await rejects(publish(data),'invalid-argument');assert.equal(await get('publicUnits/'+source.id),undefined);
  });
  await t.test('concurrent approval requests cannot overwrite one another',async()=>{
   const results=await Promise.allSettled([publish(),publish()]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.code,'aborted');
@@ -76,11 +76,32 @@ test('student Unit publication — emulator-only synthetic records',async t=>{
   await publish();await db.doc('learningJourneys/2026_year-4').set({placements:[{unitId:source.id,status:'upcoming'}]});assert.equal((await rest('publicUnits/'+source.id)).status,200);assert.equal((await rest('learningJourneys/2026_year-4')).status,403);
  });
  await t.test('oversized approved projections are rejected before Firestore writes',async()=>{
-  const examples=Array.from({length:12},(_,i)=>({id:`example-${i}`,url:`https://example.org/${'x'.repeat(300)}/${i}.png`,alt:'图'.repeat(300)}));
-  const lessons=Array.from({length:30},(_,i)=>({...source.lessons[1],id:`lesson-${i}`,learningIntention:'文'.repeat(1000),workedExamples:examples}));
+  const urls=i=>Array.from({length:10},(_,j)=>`https://example.org/${i}/${j}/${'x'.repeat(1900)}`);
+  const lessons=Array.from({length:30},(_,i)=>({...source.lessons[1],id:`lesson-${i}`,learningIntention:'文'.repeat(1000),resources:urls(i).join('\n')}));
   await db.doc('units/'+source.id).set({...source,lessons});
-  const data=input();data.student.lessons=lessons.map(lesson=>selection(lesson.id,{includeLearningIntention:true,content:'文'.repeat(5000),workedExampleIds:examples.map(example=>example.id)}));
+  const data=input();data.student.lessons=lessons.map((lesson,i)=>selection(lesson.id,{includeLearningIntention:true,content:'文'.repeat(5000),resourceUrls:urls(i)}));
   await rejects(publish(data),'invalid-argument');assert.equal(await get('publicUnits/'+source.id),undefined);
+ });
+ await t.test('worked examples are teacher-only: never selectable, never projected, even when present in the source',async()=>{
+  await publish();const doc=await get('publicUnits/'+source.id);const json=JSON.stringify(doc);for(const hidden of ['workedExamples','approved.png','example-a','An animal diagram','private-metadata'])assert(!json.includes(hidden),hidden);
+  const data=input({expectedRevision:1});data.student.lessons[0].workedExampleIds=['example-a'];await rejects(publish(data),'invalid-argument');assert.equal((await get('publicUnits/'+source.id)).revision,1);
+ });
+ await t.test('teacher-only lessons (Speaking Assessment) cannot be published; the rest of the Unit can',async()=>{
+  await db.doc('units/'+source.id).update({lessons:[source.lessons[0],{...source.lessons[1],title:'Speaking Assessment',teacherOnly:true}]});
+  await rejects(publish(),'failed-precondition');assert.equal(await get('publicUnits/'+source.id),undefined);
+  const data=input();data.student.lessons=[selection('lesson-a')];assert.equal((await publish(data)).revision,1);
+  const json=JSON.stringify(await get('publicUnits/'+source.id));assert(!json.includes('Assessment'));assert(!json.includes('lesson-b'));
+ });
+ await t.test('cross-year Vocabulary and Speaking references are allowed when they exist and are student-visible',async()=>{
+  const data=input();data.student.lessons=[selection('lesson-a',{includeVocabulary:true,includeSpeaking:true})];
+  assert.equal((await publish(data)).revision,1);   // Year 4 Unit, Year 2 set and practice
+  for(const [path,value] of [['vocabularySets/synthetic-words',{published:false,yearLevel:2}],['vocabularySets/synthetic-words',{published:true,deleted:true}],['vocabularySets/synthetic-words',null],['speakingPractices/synthetic-speaking',{deleted:true}],['speakingPractices/synthetic-speaking',null]]){
+   await db.doc('vocabularySets/synthetic-words').set({published:true,yearLevel:2});await db.doc('speakingPractices/synthetic-speaking').set({deleted:false,yearLevelId:'year-2'});
+   if(value===null)await db.doc(path).delete();else await db.doc(path).set(value);
+   const again=input({expectedRevision:1});again.student.lessons=[selection('lesson-a',{includeVocabulary:true,includeSpeaking:true})];
+   await rejects(publish(again),'failed-precondition');assert.equal((await get('publicUnits/'+source.id)).revision,1,path);
+  }
+  const plain=input({expectedRevision:1});plain.student.lessons=[selection('lesson-a')];assert.equal((await publish(plain)).revision,2,'unlinked lessons do not depend on availability');
  });
  await t.test('publication backend refuses unknown projects',()=>{for(const projectId of ['the-mandarin-room-prod','','other-staging'])assert.throws(()=>createPublicUnitHandlers({db,projectId}),/staging or production/);});
 });

@@ -24,3 +24,10 @@ test("live Unit Library index exposes only stable metadata and canonical links",
   });
   assert.equal(JSON.stringify(index).includes("private"), false);
 });
+
+test("teacher-only lessons (e.g. assessments) never appear in the public index", () => {
+  const index = buildUnitLibraryIndex([{ id: "year-5-nationalities", yearLevel: 5, englishTitle: "Nationalities", lessons: [
+    { id: "l1", title: "Introduction" }, { id: "l2", title: "Speaking Assessment", teacherOnly: true }, { id: "l3", title: "Review", teacherOnly: false }] }]);
+  assert.deepEqual(index.units[0].lessons.map((lesson) => lesson.title), ["Introduction", "Review"]);
+  assert.equal(JSON.stringify(index).includes("Assessment"), false);
+});

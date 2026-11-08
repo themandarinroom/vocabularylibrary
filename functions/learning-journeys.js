@@ -8,6 +8,7 @@ const STATUS = new Set(['completed', 'current', 'upcoming']);
 const fail = (code, message) => { throw new HttpsError(code, message); };
 const gradeKey = year => year === 0 ? 'prep' : `year-${year}`;
 const journeyId = (academicYear, yearLevel) => `${academicYear}_${gradeKey(yearLevel)}`;
+const CONFIG = 'journeyConfig/public';
 
 function fields(value, allowed) {
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
@@ -104,6 +105,11 @@ function createJourneyHandlers({ db, timestamp, projectId }) {
             snapshot.data().schemaVersion !== 1 || snapshot.data().published !== true || snapshot.data().approvedForStudents !== true)) {
           fail('failed-precondition', 'Every visible Unit needs an approved, published public Unit record.');
         }
+        // The active public academic year is chosen only by setActiveAcademicYear. Publishing a
+        // Journey for any other year stores its snapshot without exposing it to students.
+        const config = await transaction.get(db.doc(CONFIG));
+        if (!config.exists) fail('failed-precondition', 'Choose the active public academic year before publishing Journeys.');
+        const active = config.data().activeAcademicYear === input.academicYear;
         const revision = input.expectedRevision + 1;
         const publishedAt = timestamp();
         transaction.update(ref, { revision, updatedAt: publishedAt, updatedBy: uid });
@@ -111,10 +117,45 @@ function createJourneyHandlers({ db, timestamp, projectId }) {
           schemaVersion: 1, academicYear: input.academicYear, yearLevel: input.yearLevel, revision, publishedAt,
           slots: draft.placements.map(({ unitId, status }, order) => status === 'upcoming' ? { order, status } : { order, status, unitId })
         });
-        transaction.set(db.doc(`journeySettings/${grade}`), {
+        if (active) transaction.set(db.doc(`journeySettings/${grade}`), {
           journeyId: id, academicYear: input.academicYear, yearLevel: input.yearLevel, revision, publishedAt
         });
-        return { journeyId: id, revision };
+        return { journeyId: id, revision, active, activeAcademicYear: config.data().activeAcademicYear };
+      });
+    },
+    // Teacher-controlled switch of the public academic year. journeyConfig/public is the single source of
+    // truth; the seven journeySettings pointers are derived from it here and in publishJourney only.
+    async setActiveAcademicYear(request) {
+      const uid = requireIdentity(request);
+      const input = request.data;
+      fields(input, ['academicYear', 'expectedRevision']);
+      if (!Number.isInteger(input.academicYear) || input.academicYear < 2000 || input.academicYear > 2100 ||
+          !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0 || input.expectedRevision >= Number.MAX_SAFE_INTEGER) {
+        fail('invalid-argument', 'Invalid academic year or revision.');
+      }
+      return db.runTransaction(async transaction => {
+        await requireTeacher(transaction, uid);
+        const configRef = db.doc(CONFIG), config = await transaction.get(configRef);
+        if ((config.exists ? config.data().revision : 0) !== input.expectedRevision) fail('aborted', 'The active year changed. Reload before switching.');
+        const grades = [0, 1, 2, 3, 4, 5, 6];
+        const published = await Promise.all(grades.map(grade => transaction.get(db.doc(`publishedJourneys/${journeyId(input.academicYear, grade)}`))));
+        const live = [];
+        const updatedAt = timestamp();
+        grades.forEach((grade, index) => {
+          const snapshot = published[index], data = snapshot.exists ? snapshot.data() : null;
+          const pointer = db.doc(`journeySettings/${gradeKey(grade)}`);
+          if (data && data.schemaVersion === 1 && data.academicYear === input.academicYear && data.yearLevel === grade && Number.isSafeInteger(data.revision) && data.revision > 0) {
+            transaction.set(pointer, { journeyId: snapshot.id, academicYear: input.academicYear, yearLevel: grade, revision: data.revision, publishedAt: data.publishedAt });
+            live.push(grade);
+          } else transaction.delete(pointer);
+        });
+        const revision = input.expectedRevision + 1;
+        transaction.set(configRef, {
+          schemaVersion: 1, activeAcademicYear: input.academicYear,
+          previousAcademicYear: config.exists ? config.data().activeAcademicYear : null,
+          revision, updatedAt, updatedBy: uid
+        });
+        return { activeAcademicYear: input.academicYear, revision, liveYearLevels: live };
       });
     }
   };
@@ -131,4 +172,5 @@ function getHandlers() {
 const options = { region: 'australia-southeast1', maxInstances: 2, timeoutSeconds: 30, memory: '256MiB' };
 exports.saveJourney = onCall(options, request => getHandlers().saveJourney(request));
 exports.publishJourney = onCall(options, request => getHandlers().publishJourney(request));
+exports.setActiveAcademicYear = onCall(options, request => getHandlers().setActiveAcademicYear(request));
 exports.createJourneyHandlers = createJourneyHandlers;
