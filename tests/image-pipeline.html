@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vocabulary image pipeline test</title>
+<style>body{font:14px system-ui;margin:20px;color:#0c193b}table{border-collapse:collapse}td,th{border:1px solid #dcded7;padding:4px 8px;text-align:left}.pass{color:#27875b;font-weight:700}.fail{color:#9c352d;font-weight:700}</style></head>
+<body><h1>Vocabulary image pipeline</h1><p id="summary">Running…</p><p id="env"></p><table><thead><tr><th>Encoder</th><th>Case</th><th>Result</th><th>Detail</th></tr></thead><tbody id="rows"></tbody></table>
+<script type="module">
+import { prepareVocabularyImage, IMAGE_PRESETS, __setNativeWebPForTesting, hasWebPSignature } from "../js/vocabulary-image-processing.js?v=test";
+
+const rows = document.querySelector("#rows"); const results = [];
+document.querySelector("#env").textContent = navigator.userAgent;
+function record(encoder, name, pass, detail) { results.push({ encoder, name, pass, detail }); rows.insertAdjacentHTML("beforeend", `<tr><td>${encoder}</td><td>${name}</td><td class="${pass ? "pass" : "fail"}">${pass ? "PASS" : "FAIL"}</td><td>${detail}</td></tr>`); }
+
+function canvasOf(w, h, draw) { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); return c; }
+const blobOf = (canvas, type, q) => new Promise((r) => canvas.toBlob(r, type, q));
+function photo(ctx, w, h) { const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#27875b"); g.addColorStop(1, "#dda94c"); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); const img = ctx.getImageData(0, 0, w, h); for (let i = 0; i < img.data.length; i += 4) { const n = (Math.random() - .5) * 90; img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n; } ctx.putImageData(img, 0, 0); ctx.fillStyle = "#0c193b"; ctx.font = `${Math.round(h / 4)}px sans-serif`; ctx.fillText("狗 dog", w * .1, h * .6); }
+function transparent(ctx, w, h) { ctx.clearRect(0, 0, w, h); ctx.fillStyle = "#e33"; ctx.beginPath(); ctx.arc(w / 2, h / 2, Math.min(w, h) / 3, 0, Math.PI * 2); ctx.fill(); }
+const file = (blob, name, type) => new File([blob], name, { type: type ?? blob.type });
+
+async function decode(blob) { const url = URL.createObjectURL(blob); const img = new Image(); img.src = url; await img.decode(); URL.revokeObjectURL(url); return img; }
+async function alphaAt(blob, x, y) { const img = await decode(blob); const c = canvasOf(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0)); return c.getContext("2d").getImageData(x, y, 1, 1).data[3]; }
+
+async function makeFixtures() {
+  const big = canvasOf(4032, 3024, photo);
+  const portrait = canvasOf(1500, 2400, photo);
+  const small = canvasOf(300, 200, photo);
+  const alpha = canvasOf(1000, 1000, transparent);
+  const pngBlob = await blobOf(alpha, "image/png");
+  const nativeWebp = await blobOf(small, "image/webp", .9);
+  const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0, 0x80, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0x21, 0xf9, 4, 1, 0, 0, 0, 0, 0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 0x44, 1, 0, 0x3b]);
+  const jpegBig = await blobOf(big, "image/jpeg", .92);
+  const truncatedJpeg = jpegBig.slice(0, 600);
+  return {
+    jpegBig: file(jpegBig, "classroom-photo.JPG", "image/jpeg"),
+    jpegPortrait: file(await blobOf(portrait, "image/jpeg", .9), "portrait.jpeg", "image/jpeg"),
+    jpegSmall: file(await blobOf(small, "image/jpeg", .9), "small.jpg", "image/jpeg"),
+    png: file(pngBlob, "transparent.png", "image/png"),
+    webp: (await hasWebPSignature(nativeWebp)) ? file(nativeWebp, "small.webp", "image/webp") : null,
+    pngNamedJpg: file(pngBlob, "really-a-png.jpg", "image/jpeg"),
+    noTypeJpeg: file(await blobOf(small, "image/jpeg", .9), "camera-roll", ""),
+    textAsJpg: file(new Blob(["this is not an image at all, just text"]), "fake.jpg", "image/jpeg"),
+    gif: file(new Blob([gif]), "anim.gif", "image/gif"),
+    truncated: file(truncatedJpeg, "broken.jpg", "image/jpeg"),
+    oversize: file(new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), new Uint8Array(10 * 1024 * 1024)]), "huge.jpg", "image/jpeg")
+  };
+}
+
+async function expectOk(encoder, name, f, preset, check) {
+  const t0 = performance.now();
+  try {
+    const out = await prepareVocabularyImage(f, preset);
+    const sig = await hasWebPSignature(out.blob);
+    const problems = [];
+    if (!sig) problems.push("not RIFF/WEBP");
+    if (Math.max(out.width, out.height) > preset.maxEdge) problems.push("exceeds max edge");
+    if (out.width > out.sourceWidth || out.height > out.sourceHeight) problems.push("upscaled");
+    const ratioErr = Math.abs(out.width / out.height - out.sourceWidth / out.sourceHeight);
+    if (ratioErr > 0.01) problems.push(`aspect drift ${ratioErr.toFixed(3)}`);
+    if (out.encoder !== encoder) problems.push(`used ${out.encoder}`);
+    const extra = check ? await check(out) : null; if (extra) problems.push(extra);
+    record(encoder, name, problems.length === 0, `${out.sourceFormat} ${out.sourceWidth}×${out.sourceHeight} ${Math.round(out.sourceBytes / 1024)}KB → ${out.width}×${out.height} ${Math.round(out.bytes / 1024)}KB q${out.quality} target ${out.withinTarget ? "met" : "missed"} · ${Math.round(performance.now() - t0)}ms ${problems.join("; ")}`);
+  } catch (error) { record(encoder, name, false, `threw ${error.code || ""} ${error.message}`); }
+}
+async function expectError(encoder, name, f, code, message) {
+  try { await prepareVocabularyImage(f, IMAGE_PRESETS.item); record(encoder, name, false, "accepted but should be rejected"); }
+  catch (error) { record(encoder, name, error.code === code && error.message === message, `${error.code}: ${error.message}`); }
+}
+
+const fx = await makeFixtures();
+for (const encoder of ["native", "libwebp"]) {
+  __setNativeWebPForTesting(encoder === "libwebp" ? false : null);
+  await expectOk(encoder, "JPG 4032×3024 as cover", fx.jpegBig, IMAGE_PRESETS.cover, (o) => o.width === 1200 && o.height === 900 ? null : "wrong cover dims");
+  await expectOk(encoder, "JPG 4032×3024 as item", fx.jpegBig, IMAGE_PRESETS.item, (o) => o.width === 800 && o.height === 600 ? null : "wrong item dims");
+  await expectOk(encoder, "JPG portrait 1500×2400 item", fx.jpegPortrait, IMAGE_PRESETS.item, (o) => o.height === 800 && o.width === 500 ? null : "wrong portrait dims");
+  await expectOk(encoder, "Small JPG 300×200 not upscaled", fx.jpegSmall, IMAGE_PRESETS.cover, (o) => o.width === 300 && o.height === 200 ? null : "was resized");
+  await expectOk(encoder, "PNG transparency preserved", fx.png, IMAGE_PRESETS.item, async (o) => { const corner = await alphaAt(o.blob, 2, 2); const centre = await alphaAt(o.blob, Math.round(o.width / 2), Math.round(o.height / 2)); return corner < 10 && centre > 245 ? null : `alpha corner ${corner} centre ${centre}`; });
+  if (fx.webp) await expectOk(encoder, "WebP input", fx.webp, IMAGE_PRESETS.item); else record(encoder, "WebP input", true, "skipped: this browser cannot create a WebP fixture natively (see libwebp)");
+  await expectOk(encoder, "PNG with .jpg name/MIME (sniffed as png)", fx.pngNamedJpg, IMAGE_PRESETS.item, (o) => o.sourceFormat === "png" ? null : `sniffed ${o.sourceFormat}`);
+  await expectOk(encoder, "JPEG with no MIME/extension (iPad style)", fx.noTypeJpeg, IMAGE_PRESETS.item, (o) => o.sourceFormat === "jpeg" ? null : "not sniffed");
+  await expectOk(encoder, "Cover target ≤300 KB", fx.jpegBig, IMAGE_PRESETS.cover, (o) => o.bytes <= 300 * 1024 ? null : `size ${o.bytes}`);
+  await expectOk(encoder, "Item target ≤150 KB", fx.jpegBig, IMAGE_PRESETS.item, (o) => o.bytes <= 150 * 1024 ? null : `size ${o.bytes}`);
+}
+__setNativeWebPForTesting(null);
+await expectError("—", "Text file named .jpg rejected", fx.textAsJpg, "unsupported", "Unsupported image format.");
+await expectError("—", "GIF rejected", fx.gif, "unsupported", "Unsupported image format.");
+await expectError("—", "Oversized (>10 MB) rejected", fx.oversize, "too-large", "Image file is too large.");
+await expectError("—", "Truncated/corrupt JPEG rejected", fx.truncated, "corrupt", "This image could not be read. Try another file.");
+
+const failed = results.filter((r) => !r.pass).length;
+document.querySelector("#summary").textContent = `${results.length - failed}/${results.length} passed`;
+document.querySelector("#summary").className = failed ? "fail" : "pass";
+window.__pipelineResults = { passed: results.length - failed, failed, results, userAgent: navigator.userAgent };
+</script></body></html>

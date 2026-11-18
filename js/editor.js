@@ -1,6 +1,8 @@
-import { getSet, getSets, saveSet, deleteSet } from "./vocabulary-store.js?v=duplicate-sets-1";
+import { getSet, getSetsStrict, saveSet, deleteSet } from "./vocabulary-store.js?v=image-upload-1";
 import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=duplicate-sets-1";
-import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=duplicate-sets-1";
+import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=image-upload-1";
+import { imageFieldMarkup, setImageFieldStatus, wireImageField } from "./vocabulary-image-field.js?v=image-upload-1";
+import { COVER_KEY, saveSetWithImages } from "./vocabulary-image-save.js?v=image-upload-1";
 
 const suggestions = {
   "中国": ["zhong guo", "China"], "美国": ["mei guo", "United States"], "英国": ["ying guo", "United Kingdom"], "日本": ["ri ben", "Japan"], "加拿大": ["jia na da", "Canada"], "澳大利亚": ["ao da li ya", "Australia"],
@@ -22,6 +24,10 @@ let coverImageStoragePath = existing?.coverImageStoragePath || null;
 let coverImageGenerated = existing?.coverImageGenerated === true;
 let coverCandidate = null;
 let coverGenerating = false;
+// Locally selected images (key: "cover" or item id). Nothing is uploaded until Save set.
+const pendingImages = new Map();
+let savingSet = false;
+let preparingImages = 0;
 const preservedDescription = draftSource?.description || "";
 const $ = (selector) => document.querySelector(selector);
 const slug = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `item-${Date.now()}`;
@@ -48,6 +54,28 @@ else if (duplicateSource) {
 else { $("#year-level").value = 1; items.push(newItem()); $("#set-id").value = generatedSetId(); bindGeneratedSetId(); }
 $("#set-cover-url").value = coverImage || "";
 
+function trackPreparing(busy) { preparingImages = Math.max(0, preparingImages + (busy ? 1 : -1)); }
+function discardPendingImage(key) { const pending = pendingImages.get(key); if (pending?.previewUrl) URL.revokeObjectURL(pending.previewUrl); pendingImages.delete(key); updatePendingSummary(); }
+function clearAllPendingImages() { [...pendingImages.keys()].forEach(discardPendingImage); }
+function setPendingUpload(key, prepared) { discardPendingImage(key); pendingImages.set(key, { kind: "upload", ...prepared, previewUrl: URL.createObjectURL(prepared.blob) }); updatePendingSummary(); }
+function removeImage(key, savedUrl) { discardPendingImage(key); if (savedUrl) pendingImages.set(key, { kind: "remove" }); updatePendingSummary(); }
+function updatePendingSummary() {
+  if (savingSet) return;
+  const count = pendingImages.size;
+  const status = $("#form-status");
+  if (count) { status.textContent = `${count} image change${count === 1 ? "" : "s"} ready to save. Choose Save set to publish.`; status.dataset.tone = "info"; }
+  else if (status.dataset.tone === "info") { status.textContent = ""; delete status.dataset.tone; }
+}
+function renderSavingState() { document.querySelectorAll(".item-editor").forEach(renderItemImageField); renderSetCover(); }
+function renderItemImageField(row) {
+  const item = items[Number(row.dataset.index)];
+  const slot = row.querySelector("[data-item-image-slot]");
+  if (!item || !slot) return;
+  const pending = pendingImages.get(item.id) || null;
+  slot.innerHTML = imageFieldMarkup({ variant: "item", key: item.id, label: `image for ${item.english || item.chinese || "this item"}`, savedUrl: item.image || null, pending, canUpload: imageAuthorised && !savingSet, disabledReason: "Sign in with an authorised teacher account.", status: pending?.kind === "upload" ? "Ready to save" : "" });
+  const rerender = () => renderItemImageField(row);
+  wireImageField(slot.firstElementChild, { variant: "item", onBusyChange: trackPreparing, onPrepared: (prepared) => { setPendingUpload(item.id, prepared); rerender(); }, onRemove: () => { removeImage(item.id, item.image); rerender(); }, onUndo: () => { discardPendingImage(item.id); rerender(); } });
+}
 function renderItems() {
   $("#items").innerHTML = items.map((item, index) => `<article class="item-editor compact-item-row" data-index="${index}">
     <div class="compact-item-index"><span>${index + 1}</span><div class="compact-reorder"><button class="icon-button move-up" type="button" ${index === 0 ? "disabled" : ""} aria-label="Move item up">↑</button><button class="icon-button move-down" type="button" ${index === items.length - 1 ? "disabled" : ""} aria-label="Move item down">↓</button></div></div>
@@ -55,22 +83,22 @@ function renderItems() {
     <label class="compact-field compact-field-pinyin"><span>Pinyin</span><input data-field="pinyin" value="${escapeHtml(item.pinyin)}" placeholder="pinyin"></label>
     <label class="compact-field compact-field-english"><span>English</span><input data-field="english" value="${escapeHtml(item.english)}" placeholder="English"></label>
     <section class="teacher-voice-editor compact-teacher-voice" data-teacher-voice="${escapeHtml(item.id)}"></section>
-    <details class="compact-more"><summary>⋯ More</summary><div class="compact-more-panel"><button class="mini-button suggest" type="button">Generate Pinyin &amp; English</button><label>Type<select data-field="type"><option value="word" ${item.type === "word" ? "selected" : ""}>Word</option><option value="phrase" ${item.type === "phrase" ? "selected" : ""}>Phrase</option><option value="sentence" ${item.type === "sentence" ? "selected" : ""}>Sentence</option></select></label><label class="checkbox-label"><input data-field="aiEnabled" type="checkbox" ${item.audio.aiEnabled ? "checked" : ""}> AI Voice available</label><div class="image-field"><label>Image composition<select data-field="imageType"><option value="auto" ${!item.imageType || item.imageType === "auto" ? "selected" : ""}>Automatic</option><option value="single" ${item.imageType === "single" ? "selected" : ""}>Single subject</option><option value="group" ${item.imageType === "group" ? "selected" : ""}>Group / category</option></select></label><label>Image Generation Note <span class="optional-label">Optional</span><textarea data-field="imageGenerationNote" rows="2" maxlength="300" placeholder="e.g. Show several common pets together, such as a dog, cat, rabbit, fish and bird.">${escapeHtml(item.imageGenerationNote || "")}</textarea></label><small>Used as the primary guidance for both Generate and Replace.</small><label>Image URL<input data-field="image" type="url" value="${escapeHtml(item.image || "")}" placeholder="Optional image URL"></label>${item.image ? `<img class="image-field-preview" src="${escapeHtml(item.image)}" alt="Current image for ${escapeHtml(item.english || item.chinese)}">` : ""}${coverImage && item.image !== coverImage ? `<button class="mini-button use-set-cover" type="button">Use Set Cover</button>` : ""}<button class="mini-button find-image" type="button" ${imageAuthorised && !imageGenerationInFlight.has(item.id) ? "" : "disabled"}>${item.image ? "Find replacement image" : "Find / Generate Image"}</button><small>${item.imageSource === "set-cover" ? "This item uses the current Set Cover and does not require another generation." : item.image ? "Your current image stays in place unless you explicitly accept and save a replacement." : "Automatic uses a group image when this item represents the whole set; otherwise it uses one subject."}</small></div><label>Notes<textarea data-field="notes" rows="2">${escapeHtml(item.notes || "")}</textarea></label><button class="mini-button remove-item danger" type="button">Delete item</button></div></details>
+    <details class="compact-more"><summary>⋯ More</summary><div class="compact-more-panel"><button class="mini-button suggest" type="button">Generate Pinyin &amp; English</button><label>Type<select data-field="type"><option value="word" ${item.type === "word" ? "selected" : ""}>Word</option><option value="phrase" ${item.type === "phrase" ? "selected" : ""}>Phrase</option><option value="sentence" ${item.type === "sentence" ? "selected" : ""}>Sentence</option></select></label><label class="checkbox-label"><input data-field="aiEnabled" type="checkbox" ${item.audio.aiEnabled ? "checked" : ""}> AI Voice available</label><div class="image-field"><label>Image composition<select data-field="imageType"><option value="auto" ${!item.imageType || item.imageType === "auto" ? "selected" : ""}>Automatic</option><option value="single" ${item.imageType === "single" ? "selected" : ""}>Single subject</option><option value="group" ${item.imageType === "group" ? "selected" : ""}>Group / category</option></select></label><label>Image Generation Note <span class="optional-label">Optional</span><textarea data-field="imageGenerationNote" rows="2" maxlength="300" placeholder="e.g. Show several common pets together, such as a dog, cat, rabbit, fish and bird.">${escapeHtml(item.imageGenerationNote || "")}</textarea></label><small>Used as the primary guidance for both Generate and Replace.</small><label>Image URL<input data-field="image" type="url" value="${escapeHtml(item.image || "")}" placeholder="Optional image URL"></label><div class="item-image-slot" data-item-image-slot></div>${coverImage && item.image !== coverImage ? `<button class="mini-button use-set-cover" type="button">Use Set Cover</button>` : ""}<button class="mini-button find-image" type="button" ${imageAuthorised && !imageGenerationInFlight.has(item.id) ? "" : "disabled"}>${item.image ? "Find replacement image" : "Find / Generate Image"}</button><small>${item.imageSource === "set-cover" ? "This item uses the current Set Cover and does not require another generation." : item.image ? "Your current image stays in place unless you explicitly accept and save a replacement." : "Automatic uses a group image when this item represents the whole set; otherwise it uses one subject."}</small></div><label>Notes<textarea data-field="notes" rows="2">${escapeHtml(item.notes || "")}</textarea></label><button class="mini-button remove-item danger" type="button">Delete item</button></div></details>
   </article>`).join("");
-  $("#items").querySelectorAll(".item-editor").forEach((row) => wireItem(row));
+  $("#items").querySelectorAll(".item-editor").forEach((row) => { wireItem(row); renderItemImageField(row); });
   bindTeacherVoiceControls();
   updateImageActions();
 }
 function escapeHtml(value) { return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function updateFromRow(row) { const item = items[Number(row.dataset.index)]; row.querySelectorAll("[data-field]").forEach((input) => { const field = input.dataset.field; const value = input.type === "checkbox" ? input.checked : input.value; if (field === "aiEnabled") item.audio.aiEnabled = value; else if (field === "image") { const nextImage = value || null; if (nextImage !== item.image) { delete item.imageStoragePath; delete item.imageGenerated; delete item.imageSource; } item.image = nextImage; } else item[field] = value; }); item.pinyin = item.pinyin.toLowerCase(); item.handwriting.characters = Array.from(item.chinese.replace(/[\s？。！?!.]/g, "")); }
-function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("input", () => updateFromRow(row))); row.querySelector(".remove-item").onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); items.splice(Number(row.dataset.index), 1); renderItems(); renderImageReview(); }; row.querySelector(".move-up").onclick = () => move(Number(row.dataset.index), -1); row.querySelector(".move-down").onclick = () => move(Number(row.dataset.index), 1); row.querySelector(".suggest").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; const match = suggestions[item.chinese.trim()]; if (match) { if (!item.pinyin) item.pinyin = match[0]; if (!item.english) item.english = match[1]; $("#form-status").textContent = "Suggestions added. Review and edit before saving."; renderItems(); } else $("#form-status").textContent = "No local suggestion found. Enter Pinyin and English manually."; }; row.querySelector(".find-image").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; requestImageCandidate(item, Boolean(item.image)); }; const useSetCover = row.querySelector(".use-set-cover"); if (useSetCover) useSetCover.onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); item.image = coverImage; item.imageType = "group"; item.imageSource = "set-cover"; delete item.imageStoragePath; delete item.imageGenerated; $("#form-status").textContent = `${item.chinese || item.english} now uses the Set Cover. Save the set to publish this change.`; renderItems(); renderImageReview(); }; }
+function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("input", () => updateFromRow(row))); row.querySelector('[data-field="image"]').addEventListener("input", () => { const item = items[Number(row.dataset.index)]; if (pendingImages.has(item.id)) { discardPendingImage(item.id); renderItemImageField(row); } }); row.querySelector(".remove-item").onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); discardPendingImage(item.id); items.splice(Number(row.dataset.index), 1); renderItems(); renderImageReview(); }; row.querySelector(".move-up").onclick = () => move(Number(row.dataset.index), -1); row.querySelector(".move-down").onclick = () => move(Number(row.dataset.index), 1); row.querySelector(".suggest").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; const match = suggestions[item.chinese.trim()]; if (match) { if (!item.pinyin) item.pinyin = match[0]; if (!item.english) item.english = match[1]; $("#form-status").textContent = "Suggestions added. Review and edit before saving."; renderItems(); } else $("#form-status").textContent = "No local suggestion found. Enter Pinyin and English manually."; }; row.querySelector(".find-image").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; requestImageCandidate(item, Boolean(item.image)); }; const useSetCover = row.querySelector(".use-set-cover"); if (useSetCover) useSetCover.onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); discardPendingImage(item.id); item.image = coverImage; item.imageType = "group"; item.imageSource = "set-cover"; delete item.imageStoragePath; delete item.imageGenerated; $("#form-status").textContent = `${item.chinese || item.english} now uses the Set Cover. Save the set to publish this change.`; renderItems(); renderImageReview(); }; }
 function move(index, change) { const target = index + change; if (target < 0 || target >= items.length) return; [items[index], items[target]] = [items[target], items[index]]; renderItems(); }
 function updateAllRows() { document.querySelectorAll(".item-editor").forEach(updateFromRow); }
 function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), description: preservedDescription, coverImage, coverImageStoragePath, coverImageGenerated, items }; }
 async function deleteGeneratedImageIfUnreferenced(storagePath, imageUrl, currentSetId) {
   if (!storagePath || !imageUrl) return;
   try {
-    const sets = await getSets();
+    const sets = await getSetsStrict();
     const stillReferenced = sets.some((set) => set.id !== currentSetId && (set.coverImage === imageUrl || set.items.some((item) => item.image === imageUrl)));
     if (!stillReferenced) await deleteGeneratedVocabularyImage(storagePath);
   } catch (error) {
@@ -92,11 +120,17 @@ function discardCoverCandidate() {
   coverCandidate = null;
 }
 function renderSetCover() {
-  const current = $("#set-cover-current");
-  current.innerHTML = coverImage ? `<img src="${escapeHtml(coverImage)}" alt="Current Vocabulary Set cover"><span>Current saved cover</span>` : "";
+  const field = $("#set-cover-field");
+  const previousStatus = field.querySelector("[data-image-status]");
+  const keepStatus = previousStatus?.dataset.tone === "error" ? previousStatus.textContent : "";
+  field.innerHTML = imageFieldMarkup({ variant: "cover", key: COVER_KEY, label: "Vocabulary Set cover", savedUrl: coverImage, pending: pendingImages.get(COVER_KEY) || null, canUpload: imageAuthorised && !savingSet, disabledReason: "Sign in with an authorised teacher account.", extraActions: `<button id="generate-set-cover" class="mini-button" type="button" disabled>Generate Set Cover</button>`, status: pendingImages.get(COVER_KEY)?.kind === "upload" ? "Ready to save" : keepStatus });
+  if (keepStatus) setImageFieldStatus(field.firstElementChild, keepStatus, "error");
+  wireImageField(field.firstElementChild, { variant: "cover", onBusyChange: trackPreparing, onPrepared: (prepared) => { setPendingUpload(COVER_KEY, prepared); renderSetCover(); }, onRemove: () => { removeImage(COVER_KEY, coverImage); renderSetCover(); }, onUndo: () => { discardPendingImage(COVER_KEY); renderSetCover(); } });
+  $("#set-cover-url").placeholder = pendingImages.get(COVER_KEY)?.kind === "upload" ? "Local image selected — typing a URL replaces it" : "Optional cover image URL";
+  $("#generate-set-cover").onclick = () => requestSetCover(false);
   const generateButton = $("#generate-set-cover");
   generateButton.textContent = coverImage ? "Find replacement cover" : "Generate Set Cover";
-  generateButton.disabled = !imageAuthorised || !existing || coverGenerating || Boolean(coverCandidate);
+  generateButton.disabled = !imageAuthorised || !existing || coverGenerating || savingSet || Boolean(coverCandidate);
   generateButton.title = !existing ? "Save this vocabulary set before generating a cover." : !imageAuthorised ? "Sign in with an authorised teacher account." : coverCandidate ? "Review or skip the current suggestion first." : "";
   const review = $("#set-cover-review");
   review.hidden = !coverCandidate;
@@ -131,6 +165,7 @@ async function requestSetCover(replaceCandidate = false) {
 }
 async function acceptSetCover() {
   if (!coverCandidate || coverGenerating) return;
+  if (pendingImages.size) { $("#set-cover-status").textContent = "Save set first to publish your local image changes, then accept the generated cover."; return; }
   if (coverImage && !coverCandidate.replaceExisting) { $("#set-cover-status").textContent = "The set now has a cover. Choose Replace explicitly before generating another."; return; }
   updateAllRows();
   const previous = { coverImage, coverImageStoragePath, coverImageGenerated };
@@ -220,6 +255,7 @@ async function saveApprovedImages() {
   updateAllRows();
   const approved = [...imageCandidates.values()].filter((candidate) => candidate.decision === "accepted");
   if (!approved.length) return;
+  if (pendingImages.size) { $("#form-status").textContent = "Save set first to publish your local image changes, then save the approved images."; return; }
   const uploaded = [];
   $("#save-approved-images").disabled = true; batchGenerating = true; updateImageActions();
   try {
@@ -250,16 +286,47 @@ $("#save-approved-images").onclick = saveApprovedImages;
 $("#close-image-review").onclick = () => { $("#image-review").hidden = true; };
 $("#set-cover-url").addEventListener("input", (event) => {
   const nextCover = event.target.value.trim() || null;
+  if (pendingImages.has(COVER_KEY)) discardPendingImage(COVER_KEY);
   if (nextCover !== coverImage) { coverImage = nextCover; coverImageStoragePath = null; coverImageGenerated = false; items.filter((item) => item.imageSource === "set-cover").forEach((item) => { item.image = coverImage; }); renderItems(); }
   renderSetCover();
 });
-$("#generate-set-cover").onclick = () => requestSetCover(false);
 $("#replace-set-cover").onclick = () => requestSetCover(true);
 $("#skip-set-cover").onclick = () => { discardCoverCandidate(); $("#set-cover-status").textContent = "Suggestion skipped. The current cover was not changed."; renderSetCover(); };
 $("#accept-set-cover").onclick = acceptSetCover;
-$("#set-form").onsubmit = async (event) => { event.preventDefault(); updateAllRows(); if (!existing && !$("#set-id").value.trim()) $("#set-id").value = generatedSetId(); const set = buildSet(); const saveButton = $("#set-form button[type=submit]"); saveButton.disabled = true; $("#form-status").textContent = "Saving to cloud…"; try { await saveSet(set, originalId); location.href = `./?set=${encodeURIComponent(set.id)}`; } catch (error) { $("#form-status").textContent = error.message; saveButton.disabled = false; } };
+$("#set-form").onsubmit = async (event) => {
+  event.preventDefault();
+  if (savingSet) return; // ignore repeated Save clicks while a save is running
+  if (preparingImages > 0) { $("#form-status").textContent = "Wait for the image to finish optimising, then choose Save set."; return; }
+  updateAllRows();
+  if (!existing && !$("#set-id").value.trim()) $("#set-id").value = generatedSetId();
+  const set = buildSet();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(set.id)) { $("#form-status").textContent = "Enter a valid Stable ID (lowercase letters, numbers and hyphens) before saving."; return; }
+  const saveButton = $("#set-form button[type=submit]");
+  savingSet = true; saveButton.disabled = true; renderSavingState();
+  delete $("#form-status").dataset.tone;
+  $("#form-status").textContent = pendingImages.size ? "Uploading image…" : "Saving set…";
+  const result = await saveSetWithImages({
+    set, previousSet: existing, originalId, pending: pendingImages,
+    deps: { upload: (setId, key, blob, onProgress) => uploadApprovedVocabularyImage(setId, key, blob, onProgress), saveSet, deleteImage: deleteGeneratedVocabularyImage, listSetsStrict: getSetsStrict },
+    onStatus: (status) => {
+      if (status.phase === "upload") $("#form-status").textContent = `Uploading image${status.total > 1 ? ` ${status.index + 1} of ${status.total}` : ""}… ${status.percent}%`;
+      else if (status.phase === "save") $("#form-status").textContent = "Saving set…";
+    }
+  });
+  if (result.ok) {
+    if (result.cleanup?.retained?.length) console.info("[Vocabulary images] Superseded images retained:", result.cleanup.retained.length);
+    $("#form-status").textContent = "Saved successfully";
+    $("#form-status").dataset.tone = "success";
+    clearAllPendingImages();
+    setTimeout(() => { location.href = `./?set=${encodeURIComponent(result.set.id)}`; }, 500);
+    return;
+  }
+  console.error("[Vocabulary save]", result.error);
+  savingSet = false; saveButton.disabled = false; renderSavingState();
+  $("#form-status").textContent = result.message; // pending images and all other edits are kept for retry
+};
 $("#delete-set").onclick = async () => { if (confirm(`Delete “${existing.title}” from every device?`)) { try { await deleteSet(originalId); location.href = "./"; } catch (error) { $("#form-status").textContent = error.message; } } };
 initialiseTeacherVoiceAuth(() => $("#set-id").value.trim(), ({ authorised }) => { imageAuthorised = authorised === true; renderItems(); renderImageReview(); renderSetCover(); });
-window.addEventListener("beforeunload", () => { imageCandidates.forEach((candidate) => { if (candidate.previewUrl) URL.revokeObjectURL(candidate.previewUrl); }); discardCoverCandidate(); });
+window.addEventListener("pagehide", () => { imageCandidates.forEach((candidate) => { if (candidate.previewUrl) URL.revokeObjectURL(candidate.previewUrl); }); discardCoverCandidate(); clearAllPendingImages(); });
 renderItems();
 renderSetCover();

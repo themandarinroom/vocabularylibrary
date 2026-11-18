@@ -110,6 +110,14 @@ export async function getSets() {
   }
 }
 
+// Like getSets(), but never falls back to the browser cache: callers that
+// decide whether a shared image may be deleted need authoritative data.
+export async function getSetsStrict() {
+  const services = await getFirebaseServices();
+  const ref = services.firestoreSdk.query(services.firestoreSdk.collection(services.db, COLLECTION), services.firestoreSdk.where("published", "==", true));
+  return authoritativeSets(await services.firestoreSdk.getDocs(ref));
+}
+
 export async function getSet(id) {
   if (!id) return null;
   try {

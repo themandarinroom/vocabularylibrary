@@ -30,6 +30,17 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
 
 `getSet(id)` and `getSets()` treat the current Firebase project's Firestore documents as authoritative. `watchSet(id)` and `watchSets()` provide live updates. A project-specific browser cache is used only when a cloud read genuinely fails; cloud and packaged data are never merged. Authorised saves write Firestore first, then refresh that cache. Stable set and item IDs are not regenerated, so existing Teacher Voice documents remain linked.
 
+## Vocabulary images (local upload, URL or generated)
+
+The **Vocabulary Set Cover** section sits directly below Set details. Covers and item images (item **⋯ More** panel) can come from **Upload Image** (file picker, iPad Photo Library/Files, or drag and drop on desktop), an image URL, or the existing AI generation.
+
+- Accepts JPG, PNG and WebP up to 10 MB. The real format is detected from the file's bytes, not its name or MIME type.
+- Images are resized without upscaling (cover ≤ 1200 px, item ≤ 800 px on the longest side), keep their aspect ratio and transparency, and are encoded as WebP (targets: cover ≤ 300 KB, item ≤ 150 KB). Safari/iPadOS, whose Canvas cannot encode WebP, uses the vendored libwebp encoder shared with Unit Library (`vendor/jsquash-webp`). Every upload is checked for genuine `RIFF…WEBP` bytes.
+- Selecting an image only prepares a local preview. Nothing is uploaded and the published image is unchanged until **Save set**. Save uploads new images, writes the set once, then deletes superseded managed images only when no published set still references them. If anything fails, new uploads are rolled back, the published set is unchanged, and all unsaved edits stay in the editor for a retry.
+- Storage paths reuse the existing convention: `vocabulary/{setId}/cover/image-{revision}.webp` and `vocabulary/{setId}/{itemId}/image-{revision}.webp`. Firestore stores only the download URL and `coverImageStoragePath` / item `imageStoragePath` (uploaded items also record `imageSource: "upload"`). No Base64 is stored.
+
+Code: `js/vocabulary-image-processing.js` (validate, resize, encode), `js/vocabulary-image-field.js` (shared upload/preview control), `js/vocabulary-image-save.js` (save, rollback and reference-safe cleanup). Tests: `node --test tests/*.test.mjs`.
+
 ## Add a vocabulary set
 
 Use **+ New Set** in the teacher library, or choose **Edit** on a card. Choose a permanent descriptive ID such as `year3-school-places`; do not rename published IDs. Items can be added individually or pasted as `Chinese | pinyin | English`. Chinese-only lines are also accepted for later editing. Items can be edited, deleted and reordered with the arrow controls.

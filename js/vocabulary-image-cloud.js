@@ -34,16 +34,36 @@ export async function generateVocabularySetCover(setId, { replaceExisting = fals
   return generatedImageResult(response.data || {});
 }
 
-export async function uploadApprovedVocabularyImage(setId, itemId, blob, onProgress = () => {}) {
+const UPLOAD_TIMEOUT_MS = 120000;
+let lastRevision = 0;
+const nextRevision = () => { lastRevision = Math.max(Date.now(), lastRevision + 1); return lastRevision; };
+
+class UploadTimeoutError extends Error { constructor() { super("Upload timed out."); this.name = "UploadTimeoutError"; this.code = "storage/timeout"; } }
+
+async function isGenuineWebP(blob) {
+  if (!blob?.slice || blob.size < 12) return false;
+  const b = new Uint8Array(await blob.slice(0, 12).arrayBuffer());
+  return b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+}
+
+export async function uploadApprovedVocabularyImage(setId, itemId, blob, onProgress = () => {}, { timeoutMs = UPLOAD_TIMEOUT_MS } = {}) {
   assertIds(setId, itemId);
   const services = await getFirebaseServices();
-  if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before saving images.");
-  const revision = Date.now();
+  if (!services.auth.currentUser) throw Object.assign(new Error("Sign in with an authorised teacher account before saving images."), { code: "storage/unauthenticated" });
+  if (!await isGenuineWebP(blob)) throw new Error("Upload stopped because the prepared image is not a genuine WebP file.");
+  const revision = nextRevision();
   const storagePath = `vocabulary/${setId}/${itemId}/image-${revision}.webp`;
   const imageRef = services.storageSdk.ref(services.storage, storagePath);
   const task = services.storageSdk.uploadBytesResumable(imageRef, blob, { contentType: "image/webp", cacheControl: "public,max-age=31536000,immutable" });
-  await new Promise((resolve, reject) => task.on("state_changed", (snapshot) => onProgress(snapshot.totalBytes ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0), reject, resolve));
-  return { imageUrl: await services.storageSdk.getDownloadURL(imageRef), imageStoragePath: storagePath };
+  let timer;
+  try {
+    await new Promise((resolve, reject) => {
+      timer = setTimeout(() => { task.cancel(); reject(new UploadTimeoutError()); }, timeoutMs);
+      task.on("state_changed", (snapshot) => onProgress(snapshot.totalBytes ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0), reject, resolve);
+    });
+  } finally { clearTimeout(timer); }
+  try { return { imageUrl: await services.storageSdk.getDownloadURL(imageRef), imageStoragePath: storagePath }; }
+  catch (error) { await deleteGeneratedVocabularyImage(storagePath).catch(() => {}); throw error; }
 }
 
 export async function deleteGeneratedVocabularyImage(storagePath) {

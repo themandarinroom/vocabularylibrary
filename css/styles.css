@@ -77,3 +77,44 @@ h1, h2, h3, p { margin-top: 0; } h1, h2, h3 { line-height: 1.1; }
 @media (max-width: 760px) { .image-review-heading { flex-direction: column; }.image-review-heading > div:last-child { width: 100%; flex-wrap: wrap; }.image-review-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 460px) { .image-review-grid { grid-template-columns: 1fr; }.image-review-heading .button { flex: 1; }.vocabulary-items-panel .panel-heading { align-items: stretch; }.vocabulary-items-panel .panel-heading #auto-add-images { width: 100%; }.set-cover-review { grid-template-columns: 1fr; }.set-cover-review > img { width: min(100%, 220px); }.set-cover-actions .mini-button { flex: 1; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Local image upload (Vocabulary Set Cover + item images) */
+.set-cover-panel { display: grid; padding: 22px 24px; gap: 12px; }
+.set-cover-panel.set-cover-editor { margin-top: 0; padding-top: 22px; border-top: 1px solid var(--line); }
+.set-cover-heading h2 { margin-bottom: 4px; }
+.set-cover-heading small { display: block; color: var(--muted); font-size: 13px; }
+.set-cover-url-field { display: flex; max-width: 560px; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 750; }
+.set-cover-url-field input { min-height: 42px; padding: 7px 10px; }
+.image-source-field { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 14px; }
+.image-field-frame { display: grid; width: 132px; aspect-ratio: 1; place-items: center; overflow: hidden; border: 1px dashed #b7cec6; border-radius: 14px; background: #f7faf8; transition: border-color .15s, background .15s; }
+.image-source-field.has-pending .image-field-frame { border-style: solid; border-color: var(--green); }
+.image-field-frame.is-drag-over { border-style: solid; border-color: var(--green); background: #eef4f1; }
+.image-field-frame img { width: 100%; height: 100%; background: var(--paper); object-fit: contain; }
+.image-field-placeholder { color: #9fb5ad; font-size: 34px; }
+.image-field-body { display: grid; min-width: 0; gap: 8px; }
+.image-field-detail strong, .image-field-detail small { display: block; }
+.image-field-detail strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.image-field-detail small { margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.image-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.image-field-actions .mini-button { display: inline-flex; margin: 0; align-items: center; color: var(--green); }
+.image-field-actions .image-remove-button { color: #9c352d; }
+.image-field-actions .image-undo-button { border-color: transparent; color: var(--muted); text-decoration: underline; }
+.image-upload-button.is-disabled, .image-field-actions .mini-button:disabled { opacity: .5; cursor: not-allowed; }
+.image-field-status { min-height: 18px; margin: 0; color: var(--muted); font-size: 12px; font-weight: 650; }
+.image-field-status[data-tone="error"] { color: #9c352d; }
+.image-source-field.is-busy .image-field-frame { opacity: .6; }
+.visually-hidden-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.image-source-field:focus-within .image-upload-button { outline: 3px solid #e5b757; outline-offset: 2px; }
+.image-source-item { grid-template-columns: 76px minmax(0, 1fr); gap: 10px; }
+.image-source-item .image-field-frame { width: 76px; border-radius: 10px; }
+.image-source-item .image-field-placeholder { font-size: 22px; }
+.image-source-item .image-field-detail strong { font-size: 12px; }
+.image-source-item .image-field-detail small { font-size: 11px; }
+.image-source-item .image-field-actions .mini-button { min-height: 34px; padding: 0 9px; font-size: 12px; }
+.form-status[data-tone="info"] { color: var(--green-dark); }
+.form-status[data-tone="success"] { color: var(--green); }
+@media (max-width: 600px) {
+  .image-source-cover { grid-template-columns: 1fr; }
+  .image-source-cover .image-field-frame { width: min(220px, 100%); }
+}
+.set-cover-panel #set-cover-status:empty { display: none; }
