@@ -72,3 +72,17 @@ footer.site-footer span{color:inherit}.site-footer span:nth-child(2){text-align:
 .bingo-board.show-visual .bingo-cell[data-parts="3"],.bingo-board.show-visual .bingo-cell[data-parts="4"]{gap:2px;padding:6px 5px}
 .bingo-board.show-visual .bingo-cell[data-parts="3"] .english,.bingo-board.show-visual .bingo-cell[data-parts="4"] .english{-webkit-line-clamp:1;white-space:nowrap;text-overflow:ellipsis;display:block}
 .bingo-board.show-visual .bingo-cell .visual{min-height:30px}
+/* Hanzi off: English / Pinyin become the primary text, sized to the cell (container units; the vw value is the
+   fallback for older Safari). Every rule is scoped to :not(.show-hanzi), so boards showing Hanzi keep exactly their
+   current sizes and layout. English stays the primary line when both are shown. */
+.bingo-board:not(.show-hanzi) .bingo-cell{container-type:inline-size}
+.bingo-board:not(.show-hanzi) .bingo-cell[data-parts] .english{font-size:clamp(17px,2.4vw,28px);font-size:clamp(15px,17cqi,32px);line-height:1.15;font-weight:700;text-align:center;overflow-wrap:break-word;hyphens:auto;-webkit-line-clamp:4}
+.bingo-board:not(.show-hanzi) .bingo-cell[data-parts] .pinyin{font-size:clamp(17px,2.3vw,26px);font-size:clamp(15px,17cqi,30px);line-height:1.2;font-weight:600;color:#2f4f3f}
+.bingo-board.show-english.show-pinyin:not(.show-hanzi) .bingo-cell[data-parts] .english{font-size:clamp(15px,2.1vw,24px);font-size:clamp(14px,15cqi,28px)}
+.bingo-board.show-english.show-pinyin:not(.show-hanzi) .bingo-cell[data-parts] .pinyin{font-size:clamp(14px,1.8vw,20px);font-size:clamp(13px,12cqi,22px);font-weight:500;color:#41604d}
+/* With pictures: smaller so the picture keeps its share; English may use two lines. */
+.bingo-board.show-visual:not(.show-hanzi) .bingo-cell[data-parts] .english{font-size:clamp(14px,1.9vw,22px);font-size:clamp(13px,13cqi,24px);white-space:normal;display:-webkit-box;-webkit-line-clamp:2}
+.bingo-board.show-visual:not(.show-hanzi) .bingo-cell[data-parts] .pinyin{font-size:clamp(13px,1.7vw,19px);font-size:clamp(13px,13cqi,22px)}
+.bingo-board.show-visual.show-english.show-pinyin:not(.show-hanzi) .bingo-cell[data-parts] .pinyin{font-size:clamp(12px,1.5vw,16px);font-size:clamp(12px,10.5cqi,18px)}
+.bingo-board.show-visual.show-english.show-pinyin:not(.show-hanzi) .bingo-cell[data-parts] .english{font-size:clamp(13px,1.8vw,20px);font-size:clamp(13px,12cqi,22px)}
+@media(orientation:landscape){.bingo-board.show-english.show-pinyin:not(.show-hanzi):not(.show-visual) .bingo-cell[data-parts] .english{font-size:clamp(14px,13cqi,28px)}}
