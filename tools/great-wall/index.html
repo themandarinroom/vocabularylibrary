@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Build the Great Wall · The Mandarin Room</title>
+  <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?v=gw-0.1">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to game</a>
+  <header class="tool-header tmr-unified-header">
+    <div class="tmr-brand">
+      <a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="../../assets/brand/emblem-header.png" width="56" height="53" alt=""></a>
+      <span class="tmr-brand-text">
+        <a class="tmr-home-link" href="https://themandarinroom.au/">The Mandarin Room</a>
+        <a class="tmr-app-link" href="https://themandarinroom.au/#/activities">Build the Great Wall</a>
+      </span>
+    </div>
+    <span class="phase-badge">v0.1 · Solo</span>
+  </header>
+  <main id="main">
+    <p id="boot-status" class="notice" role="status">Starting Build the Great Wall… If this does not finish, check your connection and reload this page.</p>
+    <button id="boot-retry" type="button" class="secondary-button" hidden>Reload page</button>
+
+    <section id="setup" class="setup-screen" aria-labelledby="setup-title">
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">Listening game</p>
+          <h1 id="setup-title">Build the Great Wall <span lang="zh-Hans">听词筑长城</span></h1>
+          <p>Listen to a Chinese word and choose the answer. Every correct answer earns a stone. Ten stones finish the wall and open a mystery box!</p>
+        </div>
+        <svg class="hero-scene" viewBox="0 0 1000 640" aria-hidden="true" focusable="false"></svg>
+      </div>
+      <div class="setup-grid">
+        <section class="panel" aria-labelledby="set-title">
+          <div class="panel-heading"><span class="step">1</span><h2 id="set-title">Choose your words</h2></div>
+          <div class="panel-body">
+            <label class="field-label" for="set-picker">Vocabulary Set</label>
+            <select id="set-picker" disabled><option>Loading…</option></select>
+            <p id="load-status" class="help" role="status">Loading published vocabulary…</p>
+            <div id="set-preview" class="set-preview" aria-label="Words in this set"></div>
+            <button id="reload" type="button" class="text-button">Reload vocabulary</button>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="level-title">
+          <div class="panel-heading"><span class="step">2</span><h2 id="level-title">Choose a level</h2></div>
+          <div class="panel-body">
+            <fieldset class="levels"><legend class="sr-only">Difficulty</legend>
+              <label class="level-card"><input type="radio" name="level" value="easy" checked><span><strong>Easy <span lang="zh-Hans">容易</span></strong><small data-level-note="easy">2 choices</small></span></label>
+              <label class="level-card"><input type="radio" name="level" value="medium"><span><strong>Medium <span lang="zh-Hans">中等</span></strong><small data-level-note="medium">3 choices</small></span></label>
+              <label class="level-card"><input type="radio" name="level" value="challenge"><span><strong>Challenge <span lang="zh-Hans">挑战</span></strong><small data-level-note="challenge">4 choices</small></span></label>
+            </fieldset>
+            <p id="config-status" class="notice" role="status">Choose a Vocabulary Set.</p>
+            <button id="start" type="button" class="primary-button" disabled>Start building <span lang="zh-Hans">开始</span></button>
+            <p class="help">No sign-in needed. Nothing is saved or uploaded.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="game" class="game-screen" aria-labelledby="game-title" hidden>
+      <h1 id="game-title" class="sr-only" tabindex="-1">Build the Great Wall</h1>
+      <div class="play-grid">
+        <div class="scene-wrap">
+          <svg id="scene" class="scene" viewBox="0 0 1000 640" role="img" aria-labelledby="scene-label"><title id="scene-label">The Great Wall under construction</title></svg>
+        </div>
+        <aside class="play-panel" aria-label="Listening question">
+          <div class="progress-row">
+            <div id="progress" class="progress" role="img" aria-label="0 of 10 stones built"></div>
+            <span id="progress-text" class="progress-text">0 / 10</span>
+          </div>
+          <div id="question-area">
+            <button id="listen" type="button" class="listen-button" aria-label="Listen to the word">
+              <span class="listen-icon" aria-hidden="true">▶</span> Listen <span lang="zh-Hans">听</span>
+            </button>
+            <p id="prompt" class="prompt">Tap Listen, then choose the answer.</p>
+            <div id="choices" class="choices" aria-label="Answer choices"></div>
+          </div>
+          <div id="place-area" class="place-area" hidden>
+            <div class="earned-stone" aria-hidden="true"></div>
+            <p class="place-title">You earned a stone!</p>
+            <p class="prompt">Tap a glowing <strong>+</strong> on the wall to build.</p>
+          </div>
+          <p id="feedback" class="feedback" role="status" aria-live="polite"></p>
+          <p id="audio-status" class="sr-only" role="status" aria-live="polite"></p>
+          <button id="change-set" type="button" class="text-button change-set">Change words or level</button>
+        </aside>
+      </div>
+    </section>
+
+    <section id="reward" class="overlay reward-screen" aria-labelledby="reward-title" hidden>
+      <div class="reward-card">
+        <h2 id="reward-title" tabindex="-1">Choose a mystery box! <span lang="zh-Hans">选一个神秘盒子！</span></h2>
+        <p>Each box hides a different view from the Great Wall.</p>
+        <div id="boxes" class="boxes"></div>
+      </div>
+    </section>
+
+    <section id="viewer" class="overlay viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title" hidden>
+      <div class="viewer-frame">
+        <div class="viewer-bar">
+          <h2 id="viewer-title"></h2>
+          <button id="viewer-close" type="button" class="close-button" aria-label="Close the video">✕ Close</button>
+        </div>
+        <div class="viewer-stage">
+          <video id="reward-video" playsinline webkit-playsinline preload="none" disablepictureinpicture disableremoteplayback></video>
+          <img id="reward-fallback" alt="" hidden>
+          <div id="reward-placeholder" class="placeholder" hidden></div>
+          <p id="viewer-message" class="viewer-message" role="status"></p>
+        </div>
+        <div class="viewer-progress" aria-hidden="true"><span id="viewer-progress"></span></div>
+        <p id="viewer-credit" class="viewer-credit"></p>
+      </div>
+    </section>
+
+    <section id="complete" class="complete-screen" aria-labelledby="complete-title" hidden>
+      <svg class="complete-scene" viewBox="0 0 1000 640" aria-hidden="true" focusable="false"></svg>
+      <h1 id="complete-title" tabindex="-1">Great Wall Completed! <span lang="zh-Hans">长城建好了！</span></h1>
+      <div class="complete-actions">
+        <button id="build-again" type="button" class="primary-button">Build Again <span lang="zh-Hans">再建一次</span></button>
+        <a id="back-to-games" class="secondary-button" href="https://themandarinroom.au/#/activities">Back to Games</a>
+      </div>
+    </section>
+    <noscript><p class="notice">Please enable JavaScript to play Build the Great Wall.</p></noscript>
+  </main>
+  <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Great Wall v0.1 · Nov 2026</span></footer>
+  <script type="module" src="./bootstrap.mjs"></script>
+</body>
+</html>
