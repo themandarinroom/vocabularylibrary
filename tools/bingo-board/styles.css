@@ -43,3 +43,32 @@ footer.site-footer span{color:inherit}.site-footer span:nth-child(2){text-align:
 /* S3.1 header: shared The Mandarin Room brand (css/tmr-brand.css) and the same header bar as Word Randomiser. */
 .tool-header{max-width:none;width:100%;margin:0;min-height:84px;padding:max(12px,env(safe-area-inset-top)) max(3.6vw,20px) 12px;background:#fff;box-shadow:var(--tmr-shadow-header,0 3px 14px #14223908);position:relative;z-index:2}
 @media(max-width:700px){.tool-header{padding:max(12px,env(safe-area-inset-top)) 18px 12px}}
+
+/* v0.1.1 board display options: Visual | English | Hanzi | Pinyin */
+.board-toolbar{flex-wrap:wrap;row-gap:4px}
+.display-options{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;margin:0;padding:0;border:0;min-width:0}
+.display-toggle{display:flex;align-items:center;gap:7px;min-height:44px;white-space:nowrap;cursor:pointer;font-weight:700}
+.display-toggle input{width:22px;height:22px;margin:0;accent-color:var(--deep)}
+.display-toggle.locked{cursor:default}
+.display-hint{margin:-8px 0 10px;text-align:right;font-size:12px;color:var(--muted)}
+.bingo-cell{overflow:hidden;gap:4px}
+.bingo-cell .visual{flex:1 1 0;min-height:0;width:100%;max-width:100%;object-fit:contain;pointer-events:none;-webkit-user-select:none;user-select:none}
+.bingo-cell .english{font-size:14px;font-weight:650;line-height:1.2;color:#2f4f3f;max-width:100%;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bingo-cell .pinyin{flex:0 0 auto}
+.bingo-board.show-visual .bingo-cell{padding-top:8px;padding-bottom:8px}
+/* Several parts in one cell: share the height instead of overflowing; Hanzi stays the largest, readable on iPad. */
+.bingo-cell[data-parts="2"] .hanzi{font-size:clamp(22px,3vw,36px);line-height:1.2}
+.bingo-cell[data-parts="3"] .hanzi,.bingo-cell[data-parts="4"] .hanzi{font-size:clamp(21px,2.7vw,30px);line-height:1.15}
+.bingo-board[style*="--board-size: 5"] .bingo-cell[data-parts="2"] .hanzi{font-size:clamp(21px,2.7vw,28px)}
+.bingo-board[style*="--board-size: 5"] .bingo-cell[data-parts="3"] .hanzi,.bingo-board[style*="--board-size: 5"] .bingo-cell[data-parts="4"] .hanzi{font-size:clamp(20px,2.5vw,24px)}
+.bingo-cell[data-parts] .english,.bingo-cell[data-parts] .pinyin{font-size:13px;line-height:1.15}
+.bingo-board[style*="--board-size: 5"] .bingo-cell[data-parts] .english,.bingo-board[style*="--board-size: 5"] .bingo-cell[data-parts] .pinyin,.bingo-cell[data-parts="4"] .english,.bingo-cell[data-parts="4"] .pinyin{font-size:12px}
+@media(max-width:760px){.display-options{gap:0 10px}.display-toggle{font-size:12px}.display-hint{text-align:left;margin-top:-6px}}
+@media(max-width:440px){.bingo-cell .english{font-size:11px}.display-toggle input{width:20px;height:20px}}
+/* Visual-only cells: the picture fills the cell. */
+.bingo-cell[data-parts="1"] .visual{max-height:100%}
+.choose-all-row{background:#e4f1e5;border:1px solid #9bb6a9}.choose-all-row strong{font-size:17px}
+/* Dense cells with a picture (3-4 parts): tighter spacing and one-line English so the picture keeps a useful size. */
+.bingo-board.show-visual .bingo-cell[data-parts="3"],.bingo-board.show-visual .bingo-cell[data-parts="4"]{gap:2px;padding:6px 5px}
+.bingo-board.show-visual .bingo-cell[data-parts="3"] .english,.bingo-board.show-visual .bingo-cell[data-parts="4"] .english{-webkit-line-clamp:1;white-space:nowrap;text-overflow:ellipsis;display:block}
+.bingo-board.show-visual .bingo-cell .visual{min-height:30px}

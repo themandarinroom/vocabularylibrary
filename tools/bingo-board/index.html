@@ -19,13 +19,13 @@
         <a class="tmr-app-link" href="./">Bingo Games</a>
       </span>
     </div>
-    <span class="phase-badge">v0.1.0 · Solo</span>
+    <span class="phase-badge">v0.1.1 · Solo</span>
   </header>
   <main id="main">
     <p id="boot-status" class="notice" role="status">Starting Bingo… If this does not finish, check your connection and reload this page.</p>
     <button id="boot-retry" type="button" class="secondary-button" hidden>Reload page</button>
     <section id="setup" class="setup-screen" aria-labelledby="setup-title">
-      <div class="intro"><p class="eyebrow">LISTEN · FIND · CONNECT</p><h1 id="setup-title">Your next word<br>is a little win.</h1><p>Make a board, listen carefully, and find the Chinese characters.<br>Your vocabulary booklet is always welcome.</p></div>
+      <h1 id="setup-title" class="sr-only">Solo Bingo: choose your words</h1>
       <div class="mode-strip"><strong>Solo Bingo</strong><span>Play at your own pace</span></div>
       <div class="setup-grid">
         <section class="panel" aria-labelledby="words-title">
@@ -61,7 +61,7 @@
             <span id="word-count" class="word-count"></span>
             <button id="change-words" type="button" class="text-button">Change words</button>
           </div>
-          <section class="board-panel panel" aria-label="Your Bingo board"><div class="board-toolbar"><span id="board-caption"></span><label class="pinyin-toggle"><input id="show-pinyin" type="checkbox"> Show Pinyin</label></div><div id="board" class="bingo-board"></div></section>
+          <section class="board-panel panel" aria-label="Your Bingo board"><div class="board-toolbar"><span id="board-caption"></span><fieldset class="display-options" aria-describedby="display-hint"><legend class="sr-only">Show on the board</legend><label class="display-toggle"><input id="display-visual" type="checkbox"> Visual</label><label class="display-toggle"><input id="display-english" type="checkbox"> English</label><label class="display-toggle"><input id="display-hanzi" type="checkbox" checked> Hanzi</label><label class="display-toggle"><input id="display-pinyin" type="checkbox"> Pinyin</label></fieldset></div><p id="display-hint" class="display-hint" hidden>At least one option stays on.</p><div id="board" class="bingo-board"></div></section>
         </div>
         <aside class="play-controls" aria-label="Game controls">
           <button id="listen-word" type="button" class="primary-button" aria-label="Listen to the word">♫ Listen</button>
@@ -75,7 +75,7 @@
     </section>
     <noscript><p class="notice">Please enable JavaScript to play Bingo Board.</p></noscript>
   </main>
-  <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Bingo v0.1.0 · Nov 2026</span></footer>
+  <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Bingo v0.1.1 · Nov 2026</span></footer>
   <script type="module" src="./bootstrap.mjs"></script>
 </body>
 </html>
