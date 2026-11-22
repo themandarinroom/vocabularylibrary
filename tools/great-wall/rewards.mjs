@@ -5,11 +5,11 @@
 // Sources, licences and attribution: ./media/CREDITS.md.
 import { shuffle } from '../listening-core/rounds.mjs';
 
-export const VIDEO_SECONDS = 10;
+export const VIDEO_SECONDS = 15;
 export const BOX_COUNT = 5;
 
-const pexels = (author, url) => `Video: ${author} on Pexels (${url}) · Pexels License · trimmed to 10 s`;
-const COMMONS = 'Video: Johnny Xmas, “Flying the Drone around the Great Wall of China near Jinshan Ridge”, CC BY 3.0 (creativecommons.org/licenses/by/3.0), via Wikimedia Commons (commons.wikimedia.org) · trimmed to 10 s and resized';
+const pexels = (author, url) => `Video: ${author} on Pexels (${url}) · Pexels License · trimmed to 15 s`;
+const COMMONS = 'Video: Johnny Xmas, “Flying the Drone around the Great Wall of China near Jinshan Ridge”, CC BY 3.0 (creativecommons.org/licenses/by/3.0), via Wikimedia Commons (commons.wikimedia.org) · trimmed to 15 s and resized';
 
 export const REWARDS = Object.freeze([
   Object.freeze({ id: 'sunrise', title: 'Sunrise on the Great Wall', chinese: '长城日出', available: true,

@@ -1,4 +1,4 @@
-// Build the Great Wall v0.1 — Solo listening game. No sign-in, no saving, no writes.
+// Build the Great Wall v0.2 — Solo listening game. No sign-in, no saving, no writes.
 import { loadCatalogueWithTimeout, loadVoice } from '../listening-core/library.mjs';
 import { listeningPool, yearLabel } from '../listening-core/vocabulary.mjs';
 import { LEVELS, LEVEL_ORDER, levelAvailability, supportedLevel, MIN_POOL } from '../listening-core/rounds.mjs';
@@ -253,7 +253,7 @@ function openBox(id, button) {
     $('reward-placeholder').hidden = false;
     $('reward-placeholder').innerHTML = '';
     $('reward-placeholder').append(Object.assign(document.createElement('strong'), { textContent: 'Video placeholder' }),
-      Object.assign(document.createElement('span'), { textContent: `“${reward.title}” — the licensed 10-second video has not been added yet.` }));
+      Object.assign(document.createElement('span'), { textContent: `“${reward.title}” — the licensed ${VIDEO_SECONDS}-second video has not been added yet.` }));
     startClock(false);
   }
   $('viewer-close').focus({ preventScroll: true });
@@ -264,7 +264,7 @@ function startClock(followVideo) {
   viewerTimer = setInterval(() => {
     const seconds = followVideo && !video.hidden && !video.paused ? video.currentTime : (performance.now() - viewerStart) / 1000;
     setProgress(seconds / VIDEO_SECONDS);
-    // Exactly ten seconds: stop at 10 s even if a file were longer; never replay.
+    // Exactly VIDEO_SECONDS (15 s): stop then even if a file were longer; never replay.
     if (seconds >= VIDEO_SECONDS) finishViewer();
   }, 100);
 }

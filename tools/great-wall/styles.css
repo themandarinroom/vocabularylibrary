@@ -1,6 +1,6 @@
 @import url("../../css/tmr-tokens.css?v=1");
 @import url("../../css/tmr-brand.css?v=tool-header-1");
-/* Build the Great Wall v0.1. Same palette and controls as Bingo Solo; watercolour scene. */
+/* Build the Great Wall v0.2. Same palette and controls as Bingo Solo; storybook scene. */
 :root{--ink:#173d38;--deep:#176a5a;--green:#2b9c72;--yellow:#ffd85a;--paper:#fffdf8;--line:#dce7dc;--muted:#526e63;--shadow:0 12px 35px #1b504310;
   --stone:#cdb795;--stone-dark:#a38a68;--stone-new:#e2c99d;--mortar:#8f7a5c;--glow:#ffbf3c;--red:#c8372d;
   --header:84px;font-family:var(--tmr-font-ui);color:var(--ink);background:#fff;color-scheme:light}
@@ -61,7 +61,7 @@ select{width:100%;padding:13px 12px;background:#fff;border:1px solid #9bb6a9;bor
 .progress-row{display:flex;align-items:center;gap:10px}
 .progress{display:flex;gap:4px;flex:1}
 .pip{flex:1;height:16px;border-radius:4px;background:#ece3d2;border:1px dashed #b7a383}
-.pip.done{background:var(--stone-new);border:1px solid var(--mortar)}
+.pip.done{background:linear-gradient(#efdcb6,#dcc196);box-shadow:inset 0 2px 0 #fbf0d8;border:1px solid var(--mortar)}
 .progress-text{font-weight:800;font-size:16px;min-width:52px;text-align:right}
 .listen-button{width:100%;min-height:72px;border-radius:18px;border:0;background:var(--deep);color:#fff;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 6px 0 #0f4d40}
 .listen-button:active{transform:translateY(3px);box-shadow:0 3px 0 #0f4d40}
@@ -87,7 +87,7 @@ select{width:100%;padding:13px 12px;background:#fff;border:1px solid #9bb6a9;bor
 .choice.shake{animation:shake 360ms ease-in-out}
 @keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .place-area{text-align:center;padding:16px;border:2px dashed #e3b64b;border-radius:18px;background:#fff8e2}
-.earned-stone{width:120px;height:46px;margin:6px auto 12px;border-radius:7px;background:var(--stone-new);border:2px solid var(--mortar);box-shadow:inset 0 6px 0 #f3e2c2,0 6px 14px #8f7a5c55;animation:bob 1.4s ease-in-out infinite}
+.earned-stone{width:120px;height:46px;margin:6px auto 12px;border-radius:7px;background:var(--stone-new);border:2px solid var(--mortar);background:linear-gradient(#efdcb6,#dcc196);box-shadow:inset 4px 5px 0 #fbf0d8cc,inset -5px -6px 0 #a98c6680,0 6px 14px #8f7a5c55;animation:bob 1.4s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-6px)}}
 .place-title{font-size:22px;font-weight:800;margin:0}
 .place-area .prompt{margin-bottom:0}
@@ -96,18 +96,33 @@ select{width:100%;padding:13px 12px;background:#fff;border:1px solid #9bb6a9;bor
 .feedback.correct{color:#1f704d}.feedback.incorrect{color:#9a4a12}.feedback.warning{color:#8a4b00}
 .change-set{align-self:center}
 
-/* Scene drawing */
-.masonry.old rect{fill:var(--stone);stroke:var(--stone-dark);stroke-width:2}
-.mortar line{stroke:var(--mortar);stroke-width:1.6;opacity:.55}
-.tower-openings path{fill:#5d4b3a;opacity:.85}
-.pavilion rect{fill:#a3382f}.pavilion .floor{fill:#7b5d45}
-.pavilion .roof{fill:#4f5b63}.pavilion .roof-top{fill:#5f6c74}
-.far-wall path{stroke:#b49a77;stroke-width:4;stroke-linejoin:round;opacity:.8}.far-wall rect{fill:#b49a77;opacity:.85}
-.pines path{fill:#3f6e4c}
-.stone{stroke:var(--mortar);stroke-width:2.5}
-.stone.built{fill:var(--stone)}
-.stone.new{fill:var(--stone-new)}
-.stone-shine{stroke:#f6e7c9;stroke-width:4;stroke-linecap:round;opacity:.8}
+/* Scene drawing (v0.2 storybook palette: sage, muted olive, blue-grey, warm sandstone) */
+.clouds path{fill:#fbfcf9;opacity:.6}
+.far-wall path{fill:none;stroke:#c9b292;stroke-width:3.5;stroke-linejoin:round;opacity:.75}.far-wall .far-tower{fill:#c4ac8b;stroke:none;opacity:.85}
+.trees .trunk{stroke:#6d5a48;stroke-width:5;stroke-linecap:round}.trees .tree-dark{fill:#6c866f}.trees .tree-light{fill:#87a087;opacity:.85}
+/* Sandstone blocks: lit top/left bevel, shaded bottom/right bevel */
+.block .bevel-top{fill:#fbf0d8;opacity:.9}.block .bevel-left{fill:#f6e6c6;opacity:.7}
+.block .bevel-bottom{fill:#a98c66;opacity:.55}.block .bevel-right{fill:#b89b74;opacity:.5}
+.block .block-outline{fill:none;stroke:#9a8061;stroke-width:1.8}
+.block.built .bevel-top{fill:#efe1c3;opacity:.8}.block.built .bevel-bottom{opacity:.6}.block.built .block-outline{stroke:#937a5d}
+.block .glint{fill:#fff8e4;opacity:0}
+/* Watchtower */
+.watchtower .joints line{stroke:#a98f6c;stroke-width:1.3;opacity:.55}
+.tower-shade{fill:#6b5137;opacity:.13}.tower-light{fill:#fff6e0;opacity:.25}
+.merlon-cap{fill:#f3e3c3;opacity:.85}.loophole{fill:#5b4637;opacity:.8}
+.parapet-shade{fill:#7c6145;opacity:.18}
+.cornice{fill:#e8d4b0;stroke:#a68b69;stroke-width:1.5}.cornice-shadow{fill:#6b5137;opacity:.16}
+.pavilion-wall{fill:#d7bd96}.pavilion-beam{fill:#7f5f4a}.pavilion-window,.pavilion-door{fill:#4e3d33;opacity:.85}
+.pavilion .roof{fill:#5e6b70}.roof-tiles path{fill:none;stroke:#738086;stroke-width:2.4;opacity:.75}
+.roof-eave{fill:none;stroke:#414d52;stroke-width:4;stroke-linecap:round}
+.roof-ridge,.roof-ornament,.tile-ends circle{fill:#4b575c}
+.tower-openings .window{fill:#4f3d33}
+.tower-openings .arch-ring{fill:none;stroke:#ecdab8;stroke-width:8;stroke-linejoin:round}
+.tower-openings .arch-ring.door-ring{stroke-width:11}
+.tower-openings .sill{fill:#e9d6b3;stroke:#a68b69;stroke-width:1.2}
+.voussoirs{stroke:#b09574;stroke-width:1.6;stroke-linecap:round}
+.keystone{fill:#efdfbf;stroke:#a68b69;stroke-width:1.2}
+/* Stones */
 .slot.empty{fill:#fffaf0;fill-opacity:.35;stroke:#9e8a6b;stroke-width:2;stroke-dasharray:7 6}
 .slot.legal{cursor:pointer}
 .slot.legal .hit{fill:transparent}
@@ -117,14 +132,21 @@ select{width:100%;padding:13px 12px;background:#fff;border:1px solid #9bb6a9;bor
 @keyframes glow{50%{fill:#fff3c8;stroke-opacity:.55}}
 .stone-group.drop{animation:drop 520ms cubic-bezier(.3,1.4,.6,1);transform-box:fill-box;transform-origin:center bottom}
 @keyframes drop{0%{transform:translateY(-70px);opacity:0}60%{opacity:1}100%{transform:translateY(0)}}
-.celebration .flag line{stroke:#5d4b3a;stroke-width:4}.celebration .flag path{fill:var(--red);transform-box:fill-box;transform-origin:left center;animation:wave 2.4s ease-in-out infinite}
-.celebration .banner rect{fill:#fff8e6;stroke:#c8372d;stroke-width:4}
-.celebration .banner text{font:800 46px "PingFang SC","Microsoft YaHei",sans-serif;fill:#c8372d}
-.scene.done .celebration .banner{animation:rise 900ms ease-out both}
-.scene.done .stones .stone{animation:shine 1.6s ease-in-out 1}
-@keyframes wave{50%{transform:skewY(4deg) scaleX(.94)}}
-@keyframes rise{0%{transform:translateY(30px);opacity:0}100%{transform:none;opacity:1}}
-@keyframes shine{50%{fill:#f4dfb6}}
+/* Yellow dragon flags (completed wall) */
+.flag-pole{stroke:#5b4a3b;stroke-width:3.5;stroke-linecap:round}.flag-finial{fill:#d9a53a}
+.flag-edge{fill:#c9473a}.flag-field{fill:#f2c544}.flag-fold{fill:#fbe08a;opacity:.45}
+.dragon-body{fill:none;stroke:#2f3b58;stroke-width:5.2;stroke-linecap:round;stroke-linejoin:round}
+.dragon-scales{fill:none;stroke:#6f86b3;stroke-width:2.2;stroke-dasharray:1.4 2.2;stroke-linecap:round}
+.dragon-mane{fill:none;stroke:#2f3b58;stroke-width:1.8;stroke-linecap:round}
+.dragon-cloud{fill:none;stroke:#4f8a84;stroke-width:1.4;stroke-linecap:round}
+.dragon-head{fill:#2f3b58}.dragon-horn,.dragon-legs{fill:none;stroke:#2f3b58;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.dragon-whisker{fill:none;stroke:#b8432f;stroke-width:1.2;stroke-linecap:round}
+.dragon-eye{fill:#f2c544}.dragon-pearl{fill:#c9473a}
+.celebration .flag .cloth{transform-box:fill-box;transform-origin:left center;animation:wave 2.6s ease-in-out infinite}
+.celebration .flag:nth-child(2) .cloth{animation-delay:-1.1s}
+.scene.done .stones .glint{animation:glint 1.6s ease-in-out 1}
+@keyframes wave{0%,100%{transform:none}50%{transform:skewY(3deg) scaleX(.95)}}
+@keyframes glint{50%{opacity:.45}}
 
 /* ---------- Reward ---------- */
 .overlay{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:#0c193bb3}

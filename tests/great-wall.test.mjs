@@ -127,7 +127,7 @@ test('a failed picture switches the question to Chinese characters', () => {
 });
 
 test('five reward videos, each mapped to one of five boxes at random per game', () => {
-  assert.equal(REWARDS.length, 5); assert.equal(BOX_COUNT, 5); assert.equal(VIDEO_SECONDS, 10);
+  assert.equal(REWARDS.length, 5); assert.equal(BOX_COUNT, 5); assert.equal(VIDEO_SECONDS, 15);
   assert.equal(new Set(REWARDS.map(r => r.id)).size, 5);
   const seen = new Set();
   for (let i = 1; i <= 30; i++) { const boxes = assignBoxes(seeded(i)); assert.equal(new Set(boxes).size, 5); seen.add(boxes.join()); }
@@ -159,7 +159,7 @@ function mp4Info(bytes) {
   const duration = version === 1 ? Number(bytes.readBigUInt64BE(base + 4)) : bytes.readUInt32BE(base + 4);
   return { seconds: duration / timescale, faststart: moov >= 0 && moov < mdat, audio: bytes.includes('soun') };
 }
-test('every available reward video is exactly 10 seconds, streamable and small enough for school Wi-Fi', () => {
+test('every available reward video is exactly 15 seconds, streamable and small enough for school Wi-Fi', () => {
   for (const reward of REWARDS.filter(r => r.available)) {
     const bytes = fs.readFileSync(new URL(`../tools/great-wall/${reward.src.slice(2)}`, import.meta.url));
     const info = mp4Info(bytes);
@@ -171,7 +171,7 @@ test('every available reward video is exactly 10 seconds, streamable and small e
 });
 test('on-screen credits: CC BY clips name author, licence link, source and changes; Pexels clips name author', () => {
   for (const reward of REWARDS) {
-    assert(reward.credit.includes('trimmed to 10 s'), `${reward.id} notes the change`);
+    assert(reward.credit.includes('trimmed to 15 s'), `${reward.id} notes the change`);
     if (reward.credit.includes('CC BY')) {
       assert.match(reward.credit, /Johnny Xmas/); assert.match(reward.credit, /creativecommons\.org\/licenses\/by\/3\.0/);
       assert.match(reward.credit, /Wikimedia Commons/);
@@ -179,4 +179,16 @@ test('on-screen credits: CC BY clips name author, licence link, source and chang
   }
   const credits = fs.readFileSync(new URL('../tools/great-wall/media/CREDITS.md', import.meta.url), 'utf8');
   for (const reward of REWARDS) assert(credits.includes(`\`${reward.id}.mp4\``), `${reward.id} listed in CREDITS.md`);
+});
+test('v0.2 scene: no red banner above the wall, two dragon flags, self-contained and prefix-scoped', async () => {
+  const { sceneMarkup } = await import('../tools/great-wall/scene.mjs');
+  const markup = sceneMarkup('t');
+  assert(!markup.includes('长城建好了') && !markup.includes('banner'), 'banner text removed from the scene');
+  assert.equal((markup.match(/<g class="flag">/g) || []).length, 2);
+  assert.equal((markup.match(/href="#t-dragon-flag"/g) || []).length, 2);
+  assert(!/https?:\/\/(?!www\.w3\.org)/.test(markup) && !/<image/.test(markup), 'no external images');
+  const ids = [...markup.matchAll(/id="([^"]+)"/g)].map(match => match[1]);
+  assert(ids.length > 10 && ids.every(id => id.startsWith('t-')), 'every id carries the scene prefix');
+  assert.equal(new Set(ids).size, ids.length, 'ids are unique');
+  assert.match(markup, /<g class="stones" data-prefix="t">/);
 });

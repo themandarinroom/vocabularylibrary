@@ -1,4 +1,4 @@
-# Build the Great Wall 听词筑长城 — v0.1 (Solo)
+# Build the Great Wall 听词筑长城 — v0.2 (Solo)
 
 A listening game for Prep–Year 6. Hear a Chinese word, choose the answer, earn a stone and build a section of the
 Great Wall. Ten stones complete the wall and open one of five mystery-box videos. No sign-in, nothing saved or uploaded.
@@ -12,7 +12,9 @@ Great Wall. Ten stones complete the wall and open one of five mystery-box videos
 - **Answers:** pictures when the target and its distractors all have their own picture; otherwise Chinese characters.
   No Pinyin during questions.
 - **Wall:** fixed layout in `wall.mjs`; a stone can only go where every stone beneath it is already built.
-- **Rewards:** `rewards.mjs` + `media/` (see `media/CREDITS.md`); placeholders until licensed clips are added.
+- **Rewards:** `rewards.mjs` + `media/` (see `media/CREDITS.md`): five licensed 15-second clips, one per mystery box.
+- **Scene:** `scene.mjs` draws the storybook landscape, bevelled sandstone blocks, watchtower and the yellow dragon
+  flags (an original simplified vector design) shown when the wall is finished.
 
 `../listening-core/` (`rounds.mjs`, `vocabulary.mjs`, `audio-player.mjs`, `library.mjs`) has no Great Wall rules and is
 meant for future listening games (Picture Puzzle, Mandarin Maze).
