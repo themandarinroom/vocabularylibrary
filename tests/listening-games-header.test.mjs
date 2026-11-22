@@ -39,6 +39,10 @@ for (const game of games) {
   });
 }
 
+test('Great Wall hides the long game name on narrow phones so the header keeps its height', () => {
+  assert.match(read('tools/great-wall/styles.css'), /@media \(max-width:460px\)\{\.tmr-app-current\{display:none\}\}/);
+});
+
 test('Great Wall completion screen "Back to Games" goes to Listening Games', () => {
   assert(read('tools/great-wall/index.html').includes(`<a id="back-to-games" class="secondary-button" href="${LISTENING_GAMES}">Back to Games</a>`));
 });

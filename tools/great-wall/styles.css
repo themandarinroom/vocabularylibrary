@@ -238,3 +238,5 @@ footer.site-footer{display:grid;width:min(100% - 56px,1124px);margin:0 auto;padd
 .tmr-app-current::before{content:"·";content:"·" / "";margin-right:6px}
 @media (max-width:700px){.tmr-app-current{font-size:13px}}
 @media(pointer:coarse){.tmr-app-row{margin-top:0}}
+/* "Build the Great Wall" beside the link would push the version badge onto a second line on narrow phones. */
+@media (max-width:460px){.tmr-app-current{display:none}}
