@@ -229,3 +229,11 @@ footer.site-footer{display:grid;width:min(100% - 56px,1124px);margin:0 auto;padd
   .prompt{margin:6px 0}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Listening Games header: the subtitle links to the website's Listening Games page; the current game name
+   sits beside it as plain text, on the same line, so the header keeps its height. */
+.tmr-app-row{display:flex;align-items:center;flex-wrap:wrap;column-gap:6px;margin-top:2px;min-width:0}
+.tmr-app-row .tmr-app-link{margin-top:0}
+.tmr-app-current{color:var(--tmr-muted,#617797);font-family:var(--tmr-font-ui,"Avenir Next",Avenir,"Segoe UI",Arial,sans-serif);font-size:14px;font-weight:550;line-height:1.3}
+.tmr-app-current::before{content:"·";content:"·" / "";margin-right:6px}
+@media (max-width:700px){.tmr-app-current{font-size:13px}}

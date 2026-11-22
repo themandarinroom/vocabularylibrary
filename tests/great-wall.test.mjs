@@ -148,7 +148,6 @@ test('the page has no sign-in, no writes and no Pinyin in the question area', ()
   const app = fs.readFileSync(new URL('../tools/great-wall/app.mjs', import.meta.url), 'utf8');
   assert(!/signIn|saveSet|deleteSet|uploadTeacherVoice|setDoc|addDoc/.test(app));
   assert(!/\.pinyin/.test(app), 'Pinyin is never rendered');
-  assert.match(html, /href="https:\/\/themandarinroom\.au\/#\/activities"/);
   assert.match(html, /class="tool-header tmr-unified-header"/);
 });
 // Reads the movie header of an MP4 (moov is at the front: +faststart) without any dependency.
