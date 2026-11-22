@@ -2,13 +2,13 @@
    Copied unchanged into each app; requires tmr-tokens.css.
    Markup:
    <div class="tmr-brand">
-     <a class="tmr-emblem-link" href="HOME" tabindex="-1" aria-hidden="true"><img class="tmr-emblem" src="…/emblem-header.png" width="56" height="53" alt=""></a>
+     <a class="tmr-emblem-link" href="HOME" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="…/emblem-header.png" width="56" height="53" alt=""></a>
      <span class="tmr-brand-text">
        <a class="tmr-home-link" href="HOME">The Mandarin Room</a>
        <a class="tmr-app-link" href="APP">App name</a>
      </span>
    </div>
-   HOME = The Mandarin Room homepage; APP = this app's own home. */
+   HOME = The Mandarin Room homepage; APP = verified entry on the official website. */
 .tmr-brand{display:flex;align-items:center;gap:14px;flex-shrink:0;min-width:0}
 .tmr-emblem-link{display:block;flex-shrink:0;line-height:0}
 .tmr-emblem{display:block;width:var(--tmr-header-logo,56px);height:auto}
@@ -24,3 +24,12 @@
   .tmr-home-link{font-size:19px}
   .tmr-app-link{font-size:13px}
 }
+
+/* Unified Tool Header v1.0: compact baseline; larger targets on touch devices. */
+.tmr-brand{flex-shrink:1;max-width:100%}
+.tmr-emblem-link{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+.tmr-home-link,.tmr-app-link{display:flex;align-items:center;width:fit-content;max-width:100%;overflow-wrap:anywhere}
+.tmr-emblem-link:hover{filter:brightness(.92)}
+.tmr-unified-header{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;width:100%;max-width:none;margin:0;min-height:84px;padding:max(12px,env(safe-area-inset-top)) max(3.6vw,20px) 12px;background:#fff;box-shadow:var(--tmr-shadow-header,0 3px 14px #14223908);position:relative;z-index:2}
+@media(max-width:700px){.tmr-unified-header{padding-left:18px;padding-right:18px}}
+@media(pointer:coarse){.tmr-home-link,.tmr-app-link{min-height:44px}.tmr-app-link{margin-top:0}}

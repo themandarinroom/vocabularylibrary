@@ -1,0 +1,145 @@
+The Mandarin Room — Unified Tool Header v1.0
+Development review · 22 November 2026 · Australia/Melbourne
+
+STATUS AND SCOPE
+Development only. No push or Production deployment in this task. No database writes,
+Firestore/Storage rules, Firebase configuration, authentication settings or business
+JavaScript changed. Existing dirty parent checkout preserved. Implementation is in
+independent snapshots under unified-header-v1/vocabulary and unified-header-v1/units.
+No AGENTS.md or CLAUDE.md found in the workspace, inspected ancestor locations or
+fresh repository snapshots. No repository-specific instructions were available.
+
+CURRENT DIFFERENCES
+Bingo / Randomiser: already share css/tmr-brand.css and tmr-tokens.css; 56px Logo,
+22px navy title, 14px muted subtitle, white 84px bar. Subtitle used relative ./.
+Logo links were excluded from keyboard/accessibility navigation.
+Vocabulary Flashcard: separate oversized styling: 86px Logo, up to 36px title,
+23px subtitle and 110px bar. Other Vocabulary pages already used tmr-brand.css.
+Units: green square 单 mark and green title, uppercase subtitle, no official brand
+links; site-header also contains existing authentication controls.
+
+STANDARD
+Reuse assets/brand/emblem-header.png, exactly the official Bingo/Randomiser asset.
+No generated/replaced Logo. Units receives a byte-identical local copy.
+Logo width 56px; <=700px width:44px. Title 22px/19px, weight650, line-height1.2.
+Subtitle 14px/13px, weight550, line-height1.3. Title #0c193b; subtitle #617797.
+Avenir Next, Avenir, Segoe UI, Arial and existing Chinese fallbacks.
+Gap 14px/11px; white background; 12px vertical padding plus safe-area inset;
+horizontal max(3.6vw,20px), or 18px <=700px. Minimum header height84px.
+Coarse-pointer devices: each text link min-height44px, no overlapping hit areas;
+bar naturally becomes112px. Extra safe-area inset may increase this height.
+This deliberate touch accommodation keeps the compact visual font/logo sizes.
+Existing authentication actions or version badge wrap when needed on narrow screens.
+Logo and site title are independent semantic homepage links; subtitle is another
+semantic link. Logo accessible label: The Mandarin Room home. No hidden tabindex.
+Underline on text hover, darker Logo hover, visible 3px blue keyboard focus outline.
+No full-header click handler, nested anchors, browser-history navigation or content
+click listeners. Main content remains unchanged.
+
+ARCHITECTURE
+Extend existing css/tmr-brand.css instead of introducing another component system.
+Bingo/Randomiser/Vocabulary reuse that file within vocabularylibrary. Units vendors
+an identical local CSS copy plus tokens and the official image. No runtime requests
+to another tool repository. Every repository remains independently deployable.
+Versioned CSS imports/links prevent mixing previous header CSS during release.
+For future tools: copy the two CSS files and official asset locally; copy the
+semantic .tmr-brand markup from an entry page; use .tmr-unified-header; verify the
+subtitle route before setting href. Keep authentication and game logic outside it.
+
+VERIFIED NAVIGATION
+All Logo / The Mandarin Room links: https://themandarinroom.au/
+Vocabulary subtitle: https://themandarinroom.au/#/vocabulary (exact required URL)
+Bingo subtitle: https://themandarinroom.au/#/activities
+Randomiser subtitle: https://themandarinroom.au/#/activities
+Unit subtitle: https://themandarinroom.au/
+Finding reported before implementation: official routing.mjs redirects #/units to
+#/. There is no dedicated Unit catalogue route. The home year chooser is the
+current public Unit entry. This is a deliberate current-entry mapping, NOT a new
+route. Bingo/Randomiser share the existing Activities page; no individual tool
+routes or new anchors were invented. Source: live official app.mjs/routing.mjs.
+Actual browser clicks reached Home, Vocabulary and Activities with matching titles.
+
+CHANGED FILES (relative to inspected Production repository heads)
+vocabularylibrary:
+ css/tmr-brand.css
+ css/styles.css
+ index.html
+ editor.html
+ student.html
+ tools/bingo-board/index.html
+ tools/bingo-board/styles.css
+ tools/word-randomizer/index.html
+ tools/word-randomizer/styles.css
+units:
+ index.html
+ edit.html
+ view.html
+ css/tmr-brand.css (new local copy)
+ css/tmr-tokens.css (new local copy)
+ assets/brand/emblem-header.png (new exact official copy)
+Documentation: HEADER-STANDARD-v1.0.txt copied into each snapshot.
+Exact machine-readable change manifest: evidence/change-manifest.json.
+Review patches: vocabulary-header.patch and units-header.patch (text files only;
+copy the Unit PNG explicitly from the development snapshot at release time).
+
+TEST RESULTS
+47/47 Vocabulary + Randomiser Node tests PASS.
+9/9 Unit Node tests PASS. Total56/56.
+Includes random selection/repeats, live session/security model, student display,
+QR, cache isolation, image handling, Unit deep links, ordering and teacher gates.
+Browser: all four pages checked at1366x900,1024x768,820x1180,390x844,320x740.
+All20 page/viewport checks: no document horizontal overflow; official Logo loads.
+All four desktop/iPad-width branding blocks:84px, Logo56px, title22px.
+At390px:44px Logo,19px title. Unit header124px because auth controls wrap;
+Bingo at320px115.5px because its existing version badge wraps. No game redesign.
+Flashcard: direct shared URL loads; flip aria-pressed=true; next =>2/11 with URL
+item=2; Chinese-only works; audio control remains present; Tab reaches subtitle
+with solid visible focus. No content click causes brand navigation.
+Bingo: actual Solo game starts with9 cells and existing game controls.
+Randomiser: actual local11-word pool starts and successfully draws a word.
+Unit: signed-out page remains gated (Sign in to view the Unit Library).
+Static comparison:8 modified HTML bodies outside header are unchanged, including
+all script references; all79 JavaScript files unchanged; shared brand CSS copies
+byte-identical. No backend, auth or data files changed.
+
+LIMITS / PRE-RELEASE MANUAL QA
+Viewport testing uses a desktop browser at iPad dimensions, not physical iPadOS.
+The pointer:coarse rule is implemented but real touch hardware was not exercised.
+No production login, microphone/audio audition, teacher recordings, authenticated
+Unit editing or real multi-device live session was exercised. Automated session /
+auth model coverage and unchanged code reduce risk but do not replace these checks.
+Before release, check44px targets on a school iPad and audition AI/Teacher Voice;
+exercise signed-in Unit access and a staging live classroom on two devices without
+writing production data. Development preview uses existing production public reads
+and existing configs; it was NOT published to a cloud staging origin. Do not run
+save/edit/live creation in that development preview against production resources.
+
+LOCAL DEVELOPMENT PREVIEWS (server must remain running on this computer)
+http://127.0.0.1:8000/unified-header-v1/vocabulary/student.html?set=prep-numbers&item=1
+http://127.0.0.1:8000/unified-header-v1/vocabulary/tools/bingo-board/
+http://127.0.0.1:8000/unified-header-v1/vocabulary/tools/word-randomizer/
+http://127.0.0.1:8000/unified-header-v1/units/
+Screenshots and measurements: evidence/. Static screenshots remain usable if the
+local server stops. To restart: python3 -m http.server 8000 --bind 127.0.0.1
+from the parent workspace, bound to127.0.0.1.
+
+PRODUCTION PLAN — REQUIRES NEW EXPLICIT APPROVAL
+1. Complete review and the physical-device/auth/audio acceptance checks above.
+2. Fetch latest main for both repositories into clean release directories. Record
+   their then-current SHAs; compare any intervening header edits and preserve them.
+3. Apply only the listed files/patches, image and documentation. Re-run focused
+   tests and preview. Do not copy the whole workspace or snapshot into a deploy.
+4. After explicit Production approval, commit/push the allowlisted static changes
+   to each existing main branch. Their current GitHub Pages source is main:/.
+   Do NOT run Firebase deploy, Functions deploy or change rules/auth/data/DNS.
+5. Wait for each Pages build; compare served HTML/CSS/image SHA256 to release
+   sources; verify all four tools and official return navigation on desktop/iPad.
+
+ROLLBACK
+Inspected baselines:
+ vocabularylibrary afecc7e0074c5d580bc355bec4aec379746b7e01
+ units             71d89de24c2c3d1333edb5b7f6da247d6fa26263
+Record actual pre-release head again before deploying. If needed revert only each
+header release commit with git revert, push normally, wait for Pages and verify
+served files. Never force-push/reset the repository or overwrite unrelated later
+commits. There are no database/rules/auth changes to roll back.
