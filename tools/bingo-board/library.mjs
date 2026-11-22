@@ -1,11 +1,14 @@
 import { getSets } from './shared/js/vocabulary-store.js';
 import { getTeacherVoice, cacheSafeAudioUrl } from './shared/js/teacher-voice-cloud.js';
 import { catalogueFromSets } from './vocabulary.mjs';
+import { imagesFromSets } from './display.mjs';
 
 export async function loadCatalogue() {
   // Existing API returns only published, non-deleted sets (or its same-project cache).
-  // Nothing is seeded, saved, edited or uploaded here.
-  return catalogueFromSets(await getSets());
+  // Nothing is seeded, saved, edited or uploaded here. Item images are read alongside (v0.1.1 Visual option);
+  // the shared catalogue adapter itself is unchanged.
+  const sources = await getSets();
+  return { ...catalogueFromSets(sources), images: imagesFromSets(sources) };
 }
 export async function loadVoice(entry) {
   const metadata = await getTeacherVoice(entry.setId, entry.id);

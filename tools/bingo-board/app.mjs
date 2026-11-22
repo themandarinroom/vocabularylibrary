@@ -7,8 +7,12 @@ import { canUseAiVoice, speakMandarin, playTeacherVoice } from './shared/js/audi
 import { renderBoard } from './components/board.mjs';
 import { renderStars } from './components/stars.mjs';
 import { el } from './components/dom.mjs';
+import { DISPLAY_ORDER, DEFAULT_DISPLAY, toggleDisplay, enabledCount, setSelectionState } from './display.mjs';
 const $ = id => document.getElementById(id);
 let catalogue = [], selection = null, entries = new Map(), game = null, attemptNumber = 0, loading = false;
+// v0.1.1 board display options (kept for this visit, across restarts). Images that fail to load fall back to text.
+let display = DEFAULT_DISPLAY, images = new Map();
+const brokenImages = new Set();
 let audioMessage = 'Tap Listen Word to begin.';
 // S3: after a correct answer the board shows the mark for ADVANCE_MS, then moves to the next word and plays it.
 // The timer is started directly by the correct tap and plays inside its own callback (no network wait):
@@ -47,7 +51,15 @@ function renderSelection() {
   const focusKey = document.activeElement?.getAttribute('data-focus-key');
   const custom = selection.mode === 'custom';
   const set = catalogue.find(value => value.id === selection.setId);
-  $('word-list').replaceChildren(...(set?.items || []).map(item => el('label', { className: 'word-row' },
+  // v0.1.1: "Choose all" for the set being browsed. Other sets' choices are untouched; partial = indeterminate.
+  const setState = setSelectionState(set, key => selection.has(key));
+  const chosenHere = (set?.items || []).filter(item => selection.has(item.key)).length;
+  const chooseAll = custom && set?.items.length ? el('label', { className: 'word-row choose-all-row' },
+    el('input', { type: 'checkbox', id: 'choose-all', 'data-focus-key': `choose-all:${set.id}`, checked: setState === 'all', indeterminate: setState === 'some',
+      'aria-label': `Choose all words in ${set.title}`,
+      onchange: event => { for (const item of set.items) selection.toggle(item.key, event.target.checked); renderSelection(); } }),
+    el('span', { className: 'word-text' }, el('strong', {}, 'Choose all'), el('small', {}, `${chosenHere} of ${set.items.length} in this set selected`))) : null;
+  $('word-list').replaceChildren(...[chooseAll].filter(Boolean), ...(set?.items || []).map(item => el('label', { className: 'word-row' },
     el('input', { type: 'checkbox', 'data-focus-key': `select:${item.key}`, checked: custom ? selection.has(item.key) : true, disabled: !custom,
       'aria-label': `Select ${item.chinese}, ${item.english}, from ${item.setId}`,
       onchange: event => { selection.toggle(item.key, event.target.checked); renderSelection(); } }),
@@ -58,7 +70,7 @@ function renderSelection() {
   $('selected-words').replaceChildren(...selection.items.map(item => el('button', {
     type: 'button', className: 'word-chip', 'data-focus-key': `remove:${item.key}`, 'aria-label': `Remove ${item.chinese}, ${item.english}, from ${item.setId}`,
     onclick: () => { selection.remove(item.key); renderSelection(); }
-  }, `${item.chinese} ×`, el('small', {}, `${item.setId} · ${item.english}`))));
+  }, `${item.chinese} ×`, item.english ? el('small', {}, item.english) : null)));
   if (custom && !selection.items.length) $('selected-words').append(el('p', { className: 'help' }, 'Choose words above. Your selection stays as you browse other sets.'));
   updateValidation();
   if (focusKey) {
@@ -80,6 +92,7 @@ async function refreshCatalogue() {
     chosen.filter(key => validKeys.has(key)).forEach(key => selection.toggle(key, true));
     if (previous) { selection.setMode(previous.mode); if (catalogue.some(set => set.id === previous.setId)) selection.browse(previous.setId); }
     entries = new Map(catalogue.flatMap(set => set.items).map(item => [item.key, item]));
+    images = new Map([...(result.images || new Map())].filter(([key]) => !brokenImages.has(key)));
     $('set-picker').replaceChildren(...catalogue.map(set => el('option', { value: set.id }, `${Number(set.yearLevel) === 0 ? 'Prep' : `Year ${set.yearLevel}`} · ${set.title} (${set.items.length})`)));
     $('set-picker').value = selection.setId;
     $('source-controls').disabled = !catalogue.length;
@@ -116,9 +129,9 @@ let lastInput = 'pointer';
 document.addEventListener('pointerdown', () => { lastInput = 'pointer'; }, true);
 document.addEventListener('keydown', () => { lastInput = 'keyboard'; }, true);
 function renderGame() {
-  renderBoard($('board'), game, entries, submitAnswer);
+  renderBoard($('board'), game, entries, submitAnswer, { display, images, onImageError: key => { if (images.has(key)) { brokenImages.add(key); images.delete(key); renderGame(); } } });
   renderStars($('stars'), game.stars);
-  $('show-pinyin').checked = game.showPinyin;
+  renderDisplayOptions();
   $('word-count').textContent = `Word ${game.round} / ${game.sequence.length}`;
   $('board-caption').textContent = `${game.size} × ${game.size} · ${game.winningMode === 'line' ? 'Line Bingo' : 'Full House'}`;
   $('practice-status').textContent = game.practice ? 'Practice Mode' : '';
@@ -196,7 +209,21 @@ $('listen-word').addEventListener('click', () => {
   else player.play(entries.get(game.currentKey));
 });
 $('next-word').addEventListener('click', () => { if (game) advance({ autoplay: false }); });
-$('show-pinyin').addEventListener('change', event => { game = { ...game, showPinyin: event.target.checked }; renderGame(); });
+// v0.1.1 display options: change only what the cells show (never the board, the word, the answer checks or stars).
+function renderDisplayOptions() {
+  const last = enabledCount(display) === 1;
+  for (const name of DISPLAY_ORDER) {
+    const box = $(`display-${name}`);
+    box.checked = display[name];
+    box.disabled = last && display[name];          // the last option stays on, so the board never goes blank
+    box.closest('label').classList.toggle('locked', box.disabled);
+  }
+  $('display-hint').hidden = !last;
+}
+for (const name of DISPLAY_ORDER) $(`display-${name}`).addEventListener('change', event => {
+  display = toggleDisplay(display, name, event.target.checked);
+  if (game) renderGame(); else renderDisplayOptions();
+});
 $('change-words').addEventListener('click', () => { cancelAdvance(); player.cancel(); game = null; $('game').hidden = true; $('setup').hidden = false; $('start-solo').focus(); });
 window.addEventListener('pagehide', () => { cancelAdvance(); player.cancel(); });
 refreshCatalogue();
