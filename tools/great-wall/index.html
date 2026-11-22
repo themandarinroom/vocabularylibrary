@@ -38,8 +38,9 @@
         <section class="panel" aria-labelledby="set-title">
           <div class="panel-heading"><span class="step">1</span><h2 id="set-title">Choose your words</h2></div>
           <div class="panel-body">
-            <label class="field-label" for="set-picker">Vocabulary Set</label>
-            <select id="set-picker" disabled><option>Loading…</option></select>
+            <p class="field-label" id="set-label">Vocabulary Sets <span class="field-hint">Choose one or more</span></p>
+            <div id="set-picker" class="set-list" role="group" aria-labelledby="set-label" aria-busy="true"><p class="help">Loading…</p></div>
+            <p id="set-count" class="help" aria-live="polite"></p>
             <p id="load-status" class="help" role="status">Loading published vocabulary…</p>
             <div id="set-preview" class="set-preview" aria-label="Words in this set"></div>
             <button id="reload" type="button" class="text-button">Reload vocabulary</button>
@@ -53,7 +54,7 @@
               <label class="level-card"><input type="radio" name="level" value="medium"><span><strong>Medium <span lang="zh-Hans">中等</span></strong><small data-level-note="medium">3 choices</small></span></label>
               <label class="level-card"><input type="radio" name="level" value="challenge"><span><strong>Challenge <span lang="zh-Hans">挑战</span></strong><small data-level-note="challenge">4 choices</small></span></label>
             </fieldset>
-            <p id="config-status" class="notice" role="status">Choose a Vocabulary Set.</p>
+            <p id="config-status" class="notice" role="status">Choose one or more Vocabulary Sets.</p>
             <button id="start" type="button" class="primary-button" disabled>Start building <span lang="zh-Hans">开始</span></button>
             <p class="help">No sign-in needed. Nothing is saved or uploaded.</p>
           </div>

@@ -16,7 +16,8 @@ const CELEBRATE_MS = 2600;
 const params = new URLSearchParams(location.search);
 
 let catalogue = [], loading = false;
-let chosenSetId = params.get('set') || '', chosenLevel = LEVELS[params.get('level')] ? params.get('level') : 'easy';
+// ?set=<id> or ?set=<id>,<id>,… preselects one or more published sets.
+let chosenSetIds = (params.get('set') || '').split(',').map(id => id.trim()).filter(Boolean), chosenLevel = LEVELS[params.get('level')] ? params.get('level') : 'easy';
 let pool = [], entries = new Map(), game = null, heardOnce = false, justPlaced = null, timers = [];
 const brokenImages = new Set();
 let boxes = [];
@@ -39,10 +40,17 @@ const player = createAudioPlayer({ getVoice: loadVoice, canUseAiVoice, speakMand
 [['.hero-scene', 'gwh'], ['#scene', 'gwg'], ['.complete-scene', 'gwc']].forEach(([selector, prefix]) => document.querySelector(selector).insertAdjacentHTML('beforeend', sceneMarkup(prefix)));
 renderStones(document.querySelector('.hero-scene .stones'), { placed: [], legal: [] });
 
-function currentSet() { return catalogue.find(set => set.id === chosenSetId) || null; }
+// The chosen sets, in catalogue order. Their words are merged into one listening pool; a Chinese
+// word that appears in more than one set is asked once (listeningPool keeps the first).
+function currentSets() { return catalogue.filter(set => chosenSetIds.includes(set.id)); }
+function setPickerDisabled(disabled) {
+  $('set-picker').setAttribute('aria-busy', String(disabled));
+  $('set-picker').querySelectorAll('input').forEach(input => { input.disabled = disabled; });
+}
 function updateSetup() {
-  const set = currentSet();
-  ({ pool } = set ? listeningPool(set) : { pool: [] });
+  const sets = currentSets(), set = sets.length ? sets : null, many = sets.length > 1;
+  ({ pool } = listeningPool({ items: sets.flatMap(chosen => chosen.items) }));
+  $('set-count').textContent = sets.length ? `${sets.length} set${many ? 's' : ''} selected · ${pool.length} different words` : '';
   const available = levelAvailability(pool.length);
   for (const id of LEVEL_ORDER) {
     const input = document.querySelector(`input[name="level"][value="${id}"]`);
@@ -52,10 +60,10 @@ function updateSetup() {
   }
   const level = supportedLevel(pool.length, chosenLevel);
   let message;
-  if (!set) message = catalogue.length ? 'Choose a Vocabulary Set.' : 'No Vocabulary Sets are available yet.';
-  else if (!level) message = `This set has only ${pool.length} different word${pool.length === 1 ? '' : 's'}. Choose a set with at least ${MIN_POOL}.`;
+  if (!set) message = catalogue.length ? 'Choose one or more Vocabulary Sets.' : 'No Vocabulary Sets are available yet.';
+  else if (!level) message = `${many ? 'These sets have' : 'This set has'} only ${pool.length} different word${pool.length === 1 ? '' : 's'}. Choose ${many ? 'more sets' : 'another set, or add more sets,'} to reach at least ${MIN_POOL}.`;
   else {
-    if (level !== chosenLevel) { message = `This set has ${pool.length} different words, so ${LEVELS[chosenLevel].label} isn’t available. ${LEVELS[level].label} is selected.`; }
+    if (level !== chosenLevel) { message = `${many ? 'These sets have' : 'This set has'} ${pool.length} different words, so ${LEVELS[chosenLevel].label} isn’t available. ${LEVELS[level].label} is selected.`; }
     else message = `${pool.length} words ready · ${LEVELS[level].label}, ${LEVELS[level].choices} choices.`;
     document.querySelector(`input[name="level"][value="${level}"]`).checked = true;
   }
@@ -73,26 +81,36 @@ function updateSetup() {
 
 async function refreshCatalogue() {
   if (loading) return;
-  loading = true; $('reload').disabled = true; $('start').disabled = true; $('set-picker').disabled = true;
+  loading = true; $('reload').disabled = true; $('start').disabled = true; setPickerDisabled(true);
   $('load-status').textContent = 'Loading published vocabulary…';
   try {
     const result = await loadCatalogueWithTimeout();
     catalogue = [...result.sets].filter(set => set.items.length).sort((a, b) => (Number(a.yearLevel) || 0) - (Number(b.yearLevel) || 0) || a.title.localeCompare(b.title));
-    if (!catalogue.some(set => set.id === chosenSetId)) chosenSetId = catalogue[0]?.id || '';
+    chosenSetIds = chosenSetIds.filter(id => catalogue.some(set => set.id === id));
+    if (!chosenSetIds.length && catalogue.length) chosenSetIds = [catalogue[0].id];
     const groups = new Map();
     for (const set of catalogue) { const label = yearLabel(set.yearLevel); if (!groups.has(label)) groups.set(label, []); groups.get(label).push(set); }
     $('set-picker').replaceChildren(...[...groups].map(([label, sets]) => {
-      const group = document.createElement('optgroup'); group.label = label;
-      group.append(...sets.map(set => { const option = document.createElement('option'); option.value = set.id; option.textContent = `${set.title}${set.chineseTitle ? ` ${set.chineseTitle}` : ''} (${listeningPool(set).pool.length})`; return option; }));
+      const group = document.createElement('div'); group.className = 'set-group'; group.setAttribute('role', 'group');
+      const heading = document.createElement('p'); heading.className = 'set-group-title'; heading.textContent = label;
+      heading.id = `set-group-${groups.size}-${label.replace(/\W+/g, '-')}`; group.setAttribute('aria-labelledby', heading.id);
+      group.append(heading, ...sets.map(set => {
+        const option = document.createElement('label'); option.className = 'set-option';
+        const box = document.createElement('input'); box.type = 'checkbox'; box.value = set.id; box.checked = chosenSetIds.includes(set.id);
+        const name = document.createElement('span'); name.textContent = set.title;
+        if (set.chineseTitle) name.append(' ', Object.assign(document.createElement('span'), { lang: 'zh-Hans', textContent: set.chineseTitle }));
+        const count = document.createElement('small'); count.textContent = `${listeningPool(set).pool.length} words`;
+        option.append(box, name, count);
+        return option;
+      }));
       return group;
     }));
-    $('set-picker').value = chosenSetId;
-    $('set-picker').disabled = !catalogue.length;
+    setPickerDisabled(!catalogue.length);
     $('load-status').textContent = catalogue.length ? `${catalogue.length} published Vocabulary Sets.` : 'No vocabulary is available right now. Check your connection and tap Reload vocabulary.';
     $('boot-retry').hidden = catalogue.length > 0;
   } catch {
     $('load-status').textContent = 'Could not load the Vocabulary Library. Check your connection and tap Reload vocabulary.';
-    $('set-picker').disabled = !catalogue.length;
+    setPickerDisabled(!catalogue.length);
   } finally { loading = false; $('reload').disabled = false; updateSetup(); }
 }
 
@@ -302,7 +320,10 @@ function showComplete_() {
 /* ---------- Events ---------- */
 $('boot-retry').onclick = () => window.location.reload();
 $('reload').addEventListener('click', refreshCatalogue);
-$('set-picker').addEventListener('change', event => { chosenSetId = event.target.value; updateSetup(); });
+$('set-picker').addEventListener('change', () => {
+  chosenSetIds = [...$('set-picker').querySelectorAll('input:checked')].map(input => input.value);
+  updateSetup();
+});
 document.querySelectorAll('input[name="level"]').forEach(input => input.addEventListener('change', event => { chosenLevel = event.target.value; updateSetup(); }));
 $('start').addEventListener('click', () => {
   startGame();

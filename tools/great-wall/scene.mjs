@@ -50,47 +50,31 @@ function towerJoints(x, top, w, bottom, courseH = 31, joint = 46) {
   return `<g class="joints">${lines}</g>`;
 }
 
-// Triangular flag with flame-shaped red edging (pole edge at x = 0), corners (0,0), (96,50), (0,64).
-function flameEdge(from, to, teeth, depth) {
-  const dx = to[0] - from[0], dy = to[1] - from[1], len = Math.hypot(dx, dy);
-  const nx = dy / len, ny = -dx / len; // outward normal for this winding
-  const at = t => [from[0] + dx * t, from[1] + dy * t];
-  let d = '';
-  for (let i = 0; i < teeth; i++) {
-    const [px, py] = at((i + 0.7) / teeth), [ex, ey] = at((i + 1) / teeth), [cx, cy] = at((i + 0.35) / teeth);
-    d += `Q${r1(cx + nx * depth * 0.9)} ${r1(cy + ny * depth * 0.9)} ${r1(px + nx * depth)} ${r1(py + ny * depth)}`
-      + `Q${r1(px + nx * depth * 0.2)} ${r1(py + ny * depth * 0.2)} ${r1(ex)} ${r1(ey)}`;
-  }
-  return d;
-}
-const FLAG_EDGE = `M0 0${flameEdge([0, 0], [96, 50], 9, 6)}${flameEdge([96, 50], [0, 64], 8, 6)}Z`;
-
-// Original simplified vector interpretation of a Qing-style yellow dragon banner.
-function flagDefs(prefix) {
-  return `
-    <g id="${prefix}-dragon-flag">
-      <path class="flag-edge" d="${FLAG_EDGE}"/>
-      <path class="flag-field" d="M1 5 L84 49 L1 58 Z"/>
-      <path class="flag-fold" d="M1 5 L84 49 L60 40 Q30 30 1 26 Z"/>
-      <g class="dragon" transform="translate(3 3) scale(.94)">
-        <path class="dragon-cloud" d="M27 13 q3 -3 6 0 q3 -3 6 0 M47 41 q2.5 -2.5 5 0 q2.5 -2.5 5 0 M9 47 q2.5 -2.5 5 0"/>
-        <path class="dragon-body" d="M18 26 C22 16 29 16 32 24 C35 32 41 32 44 26 C47 21 53 24 56 31 Q59 38 67 43"/>
-        <path class="dragon-scales" d="M18 26 C22 16 29 16 32 24 C35 32 41 32 44 26 C47 21 53 24 56 31 Q59 38 67 43"/>
-        <path class="dragon-legs" d="M23 19 L19 12 l-2 -1 m2 1 l0 -2.5 m0 2.5 l2 -1.5 M31 28 L28 35 l-2.5 0 m2.5 0 l0 2.5 m0 -2.5 l2.5 1 M43 29 L45 36 l-2 1 m2 -1 l1.5 2 m-1.5 -2 l2.5 0 M54 27 L58 21 l-0.5 -2.5 m0.5 2.5 l2 -1.5 m-2 1.5 l2.5 1"/>
-        <path class="dragon-mane" d="M16 19 q4 -6 10 -5 M18 22 q5 -3 10 -1 M17 27 q4 1 6 5"/>
-        <path class="dragon-head" d="M5 24 Q6 18 13 18 Q20 18 21 24 Q20 30 13 30 L8 30 Q5 29 5 24 Z M6 28 L1 31 L9 30 Z"/>
-        <path class="dragon-horn" d="M12 18 L14 11 M15 18 L19 12"/>
-        <path class="dragon-whisker" d="M5 23 Q0 19 3 13 M6 26 Q1 26 0 22"/>
-        <circle class="dragon-eye" cx="10.5" cy="22" r="1.5"/>
-        <circle class="dragon-pearl" cx="5" cy="40" r="2.8"/>
-      </g>
-    </g>`;
-}
-const flag = (prefix, poleX, base, top, scale) => `
+// Yellow dragon banner: the owner-supplied artwork (media/dragon-flag.webp, 420 × 305, transparent),
+// hung from a vector pole so only the cloth waves. Width in scene units; height keeps the aspect ratio.
+export const FLAG_IMAGE = './media/dragon-flag.webp';
+const FLAG_W = 112, FLAG_H = r1(FLAG_W * 305 / 420);
+const flag = (poleX, base, top, delay) => `
     <g class="flag">
-      <line class="flag-pole" x1="${poleX}" y1="${base}" x2="${poleX}" y2="${top - 3}"/>
-      <circle class="flag-finial" cx="${poleX}" cy="${top - 5}" r="${r1(3.6 * scale)}"/>
-      <g transform="translate(${poleX + 1.5} ${top}) scale(${scale})"><use class="cloth" href="#${prefix}-dragon-flag"/></g>
+      <line class="flag-pole" x1="${poleX}" y1="${base}" x2="${poleX}" y2="${top - 4}"/>
+      <rect class="flag-collar" x="${poleX - 4}" y="${top - 6}" width="8" height="4" rx="1.5"/>
+      <circle class="flag-finial" cx="${poleX}" cy="${top - 11}" r="5.5"/>
+      <g transform="translate(${poleX + 2} ${top})"><image class="cloth" href="${FLAG_IMAGE}" width="${FLAG_W}" height="${FLAG_H}" preserveAspectRatio="none" style="animation-delay:${delay}s"/></g>
+    </g>`;
+
+// Beacon fire on the watchtower roof: the brazier is always there; flame and smoke appear when the wall is finished.
+const BRAZIER = `
+        <g class="brazier"><rect class="brazier-post" x="157" y="80" width="6" height="18"/><path class="brazier-bowl" d="M145 72 h30 l-5 10 h-20 z"/><rect class="brazier-rim" x="143" y="70" width="34" height="4" rx="2"/></g>`;
+const BEACON = `
+    <g class="beacon">
+      <g class="smoke">${[0, 1, 2, 3, 4, 5].map(i => `<circle class="puff" cx="162" cy="44" r="11" style="animation-delay:${-i * 1.2}s"/>`).join('')}
+        <path class="smoke-static" d="M152 46 q-8 -10 2 -20 q-4 -14 12 -18 q2 -14 18 -14 q14 -6 22 6 q12 2 8 14 q-10 8 -22 4 q-6 10 -18 8 q2 12 -8 20 z"/></g>
+      <circle class="fire-glow" cx="160" cy="62" r="24"/>
+      <g class="fire">
+        <path class="flame-outer" d="M147 72 Q144 56 153 47 Q152 58 159 60 Q157 45 166 35 Q166 52 172 56 Q177 63 173 72 Z"/>
+        <path class="flame-mid" d="M151 72 Q150 61 157 55 Q157 63 162 63 Q165 57 168 52 Q171 63 168 72 Z"/>
+        <path class="flame-inner" d="M155 72 Q156 64 160 60 Q163 66 165 72 Z"/>
+      </g>
     </g>`;
 
 const TOWER = { x: 70, w: 180 };
@@ -131,6 +115,7 @@ export function sceneMarkup(prefix = 'gw') {
         <path class="roof-eave" d="M72 136 Q96 158 114 156 L206 156 Q224 158 248 136"/>
         <path class="roof-ridge" d="M118 105 L202 105 L206 98 Q160 95 114 98 Z"/>
         <path class="roof-ornament" d="M116 100 Q108 99 108 92 Q112 96 119 97 Z M204 100 Q212 99 212 92 Q208 96 201 97 Z"/>
+        ${BRAZIER}
         <g class="tile-ends">${Array.from({ length: 14 }, (_, i) => `<circle cx="${117 + i * 7}" cy="155" r="2.2"/>`).join('')}</g>
       </g>
       <rect class="tower-body" x="${TOWER.x}" y="236" width="${TOWER.w}" height="${GROUND_Y - 236}" fill="url(#${P}-tower)"/>
@@ -190,11 +175,12 @@ export function sceneMarkup(prefix = 'gw') {
     <linearGradient id="${P}-tower" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e2c9a0"/><stop offset=".7" stop-color="#d6ba8f"/><stop offset="1" stop-color="#c7a97f"/></linearGradient>
     <linearGradient id="${P}-door" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2e28"/><stop offset="1" stop-color="#5a473b"/></linearGradient>
     <linearGradient id="${P}-cast" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5b4632" stop-opacity=".28"/><stop offset="1" stop-color="#5b4632" stop-opacity="0"/></linearGradient>
+    <radialGradient id="${P}-sun-glow"><stop offset="0" stop-color="#F8DFA8" stop-opacity=".34"/><stop offset=".4" stop-color="#F8DFA8" stop-opacity=".16"/><stop offset=".7" stop-color="#F8DFA8" stop-opacity=".05"/><stop offset="1" stop-color="#F8DFA8" stop-opacity="0"/></radialGradient>
+    <radialGradient id="${P}-sun"><stop offset="0" stop-color="#FBE8C0"/><stop offset=".78" stop-color="#F8DFA8"/><stop offset=".9" stop-color="#F8DFA8" stop-opacity=".55"/><stop offset="1" stop-color="#F8DFA8" stop-opacity="0"/></radialGradient>
     <clipPath id="${P}-roof-clip"><path d="${ROOF}"/></clipPath>
-    ${flagDefs(P)}
   </defs>
   <rect width="1000" height="640" fill="url(#${P}-sky)"/>
-  <g class="sun"><circle cx="800" cy="118" r="88" fill="#f8ecd0" opacity=".45"/><circle cx="800" cy="118" r="50" fill="#f6e1b2" opacity=".85"/></g>
+  <g class="sun"><circle cx="800" cy="118" r="130" fill="url(#${P}-sun-glow)"/><circle cx="800" cy="118" r="54" fill="url(#${P}-sun)"/></g>
   <g class="clouds"><path d="M560 92 q14 -20 36 -10 q16 -16 36 0 q24 -2 20 16 h-100 q-6 -6 8 -6 z"/><path d="M300 140 q10 -14 26 -7 q12 -11 26 0 q18 -1 14 12 h-72 q-4 -5 6 -5 z"/></g>
   <g class="landscape">${ranges}</g>
   <path d="M0 ${GROUND_Y} Q300 560 520 ${GROUND_Y} T1000 ${GROUND_Y - 8} V640 H0 z" fill="url(#${P}-ground)"/>
@@ -208,8 +194,10 @@ export function sceneMarkup(prefix = 'gw') {
   <rect class="tower-cast" x="${WALL_LEFT}" y="${courseY(3)}" width="22" height="${4 * COURSE_H}" fill="url(#${P}-cast)" pointer-events="none"/>
   <path class="front-grass" d="M0 600 Q260 586 520 602 T1000 596 V640 H0 z" fill="url(#${P}-front)" pointer-events="none"/>
   <g class="celebration" hidden>
-    ${flag(P, 160, 98, 10, 1.15)}
-    ${flag(P, 896, RIGHT_WALL.top - 54, 240, 1)}
+    ${BEACON}
+    ${flag(300, GROUND_Y - 4 * COURSE_H, 232, 0)}
+    ${flag(625, GROUND_Y - 4 * COURSE_H, 228, -0.9)}
+    ${flag(880, RIGHT_WALL.top - 55, 205, -1.7)}
   </g>`;
 }
 

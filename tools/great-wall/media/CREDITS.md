@@ -21,6 +21,11 @@ a licence link and a note of changes; the credit line says "trimmed to 15 s and 
 no people, text or logos, apart from a few small, distant visitors on the wall and tower roof in `watchtowers.mp4`
 (last 5 s included).
 
+## Flag artwork
+
+`dragon-flag.webp`: yellow dragon banner supplied by The Mandarin Room (the owner) on 22 Nov 2026 for use in this game.
+It was cropped to the cloth (the pole is drawn in the scene), resized to 420×305 and saved as WebP with transparency (28 KB).
+
 ## Gaps against the brief
 
 - **Snow, autumn and clouds:** no suitably licensed Great Wall footage was found. A Pexels "misty Great Wall" clip

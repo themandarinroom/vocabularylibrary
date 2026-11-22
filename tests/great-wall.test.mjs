@@ -180,15 +180,33 @@ test('on-screen credits: CC BY clips name author, licence link, source and chang
   const credits = fs.readFileSync(new URL('../tools/great-wall/media/CREDITS.md', import.meta.url), 'utf8');
   for (const reward of REWARDS) assert(credits.includes(`\`${reward.id}.mp4\``), `${reward.id} listed in CREDITS.md`);
 });
-test('v0.2 scene: no red banner above the wall, two dragon flags, self-contained and prefix-scoped', async () => {
-  const { sceneMarkup } = await import('../tools/great-wall/scene.mjs');
+test('v0.2 scene: no banner, no tower flag, three dragon banners on the wall, beacon fire, prefix-scoped', async () => {
+  const { sceneMarkup, FLAG_IMAGE } = await import('../tools/great-wall/scene.mjs');
   const markup = sceneMarkup('t');
   assert(!markup.includes('长城建好了') && !markup.includes('banner'), 'banner text removed from the scene');
-  assert.equal((markup.match(/<g class="flag">/g) || []).length, 2);
-  assert.equal((markup.match(/href="#t-dragon-flag"/g) || []).length, 2);
-  assert(!/https?:\/\/(?!www\.w3\.org)/.test(markup) && !/<image/.test(markup), 'no external images');
+  const celebration = markup.slice(markup.indexOf('class="celebration"'));
+  assert.equal((celebration.match(/<g class="flag">/g) || []).length, 3, 'three flags, all in the completion layer');
+  assert.equal((markup.match(/<g class="flag">/g) || []).length, 3, 'no other flags (none on the watchtower)');
+  for (const x of [...celebration.matchAll(/<line class="flag-pole" x1="(\d+)"/g)].map(m => Number(m[1]))) assert(x > 250, `flag at x=${x} stands on the wall, not the tower`);
+  assert.match(celebration, /class="beacon"/); assert.match(celebration, /class="fire"/); assert.match(celebration, /class="puff"/);
+  const images = [...markup.matchAll(/<image[^>]*href="([^"]+)"/g)].map(m => m[1]);
+  assert.equal(images.length, 3); assert(images.every(href => href === FLAG_IMAGE), 'only the local flag image');
+  assert(!/https?:\/\/(?!www\.w3\.org)/.test(markup), 'no external resources');
+  const flag = fs.readFileSync(new URL(`../tools/great-wall/${FLAG_IMAGE.slice(2)}`, import.meta.url));
+  assert.equal(flag.subarray(0, 4).toString(), 'RIFF'); assert(flag.length < 60 * 1024, `flag image ${flag.length} bytes`);
   const ids = [...markup.matchAll(/id="([^"]+)"/g)].map(match => match[1]);
   assert(ids.length > 10 && ids.every(id => id.startsWith('t-')), 'every id carries the scene prefix');
   assert.equal(new Set(ids).size, ids.length, 'ids are unique');
   assert.match(markup, /<g class="stones" data-prefix="t">/);
+});
+test('several Vocabulary Sets merge into one pool: keys stay distinct, a repeated Chinese word is asked once', async () => {
+  const { catalogueFromSets, listeningPool } = await import('../tools/listening-core/vocabulary.mjs');
+  const { sets } = catalogueFromSets([
+    { id: 'a', title: 'A', items: [{ id: '1', chinese: '红色' }, { id: '2', chinese: '蓝色' }] },
+    { id: 'b', title: 'B', items: [{ id: '1', chinese: '猫' }, { id: '2', chinese: '红色' }, { id: '3', chinese: '狗' }] }]);
+  const { pool, skipped } = listeningPool({ items: sets.flatMap(set => set.items) });
+  assert.deepEqual(pool.map(item => item.chinese), ['红色', '蓝色', '猫', '狗']);
+  assert.equal(skipped, 1);
+  assert.equal(new Set(pool.map(item => item.key)).size, 4, 'same item ids in different sets keep separate keys');
+  assert.equal(pool[2].setId, 'b', 'each word keeps its own set for Teacher Voice');
 });
