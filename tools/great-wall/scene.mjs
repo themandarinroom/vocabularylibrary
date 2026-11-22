@@ -162,6 +162,12 @@ export function sceneMarkup(prefix = 'gw') {
       ${blockMarkup(866, RIGHT_WALL.top - 55, 66, 55, 'built', P)}${blockMarkup(962, RIGHT_WALL.top - 55, 66, 55, 'built', P)}
     </g>`;
   const foundation = FOUNDATION.map(stone => blockMarkup(stone.x, stone.y, stone.w, stone.h, 'built', P)).join('');
+  // A section of existing wall continuing off the left edge behind the watchtower (decoration only).
+  const leftWall = `
+    <g class="left-wall">
+      ${blockCourses(0, 72, [0, 1, 2, 3].map(row => ({ y: courseY(row), h: COURSE_H, start: row % 2 ? -35 : -110, width: 150 })), P)}
+      ${blockMarkup(8, RIGHT_WALL.top - 55, 54, 55, 'built', P)}
+    </g>`;
   const trees = `
     <g class="trees">
       <path class="trunk" d="M30 578 v-26"/>
@@ -192,6 +198,7 @@ export function sceneMarkup(prefix = 'gw') {
   <g class="clouds"><path d="M560 92 q14 -20 36 -10 q16 -16 36 0 q24 -2 20 16 h-100 q-6 -6 8 -6 z"/><path d="M300 140 q10 -14 26 -7 q12 -11 26 0 q18 -1 14 12 h-72 q-4 -5 6 -5 z"/></g>
   <g class="landscape">${ranges}</g>
   <path d="M0 ${GROUND_Y} Q300 560 520 ${GROUND_Y} T1000 ${GROUND_Y - 8} V640 H0 z" fill="url(#${P}-ground)"/>
+  ${leftWall}
   ${trees}
   ${tower}
   ${rightWall}
