@@ -35,6 +35,7 @@ for (const game of games) {
     assert.match(css, /\.tmr-app-current\{[^}]*font-size:14px;font-weight:550;line-height:1\.3\}/);
     assert.match(css, /@media \(max-width:700px\)\{\.tmr-app-current\{font-size:13px\}\}/);
     assert.match(css, /content:"·" \/ ""/, 'separator is hidden from screen readers');
+    assert.match(css, /@media\(pointer:coarse\)\{\.tmr-app-row\{margin-top:0\}\}/, 'touch header keeps its 112px height');
   });
 }
 

@@ -237,3 +237,4 @@ footer.site-footer{display:grid;width:min(100% - 56px,1124px);margin:0 auto;padd
 .tmr-app-current{color:var(--tmr-muted,#617797);font-family:var(--tmr-font-ui,"Avenir Next",Avenir,"Segoe UI",Arial,sans-serif);font-size:14px;font-weight:550;line-height:1.3}
 .tmr-app-current::before{content:"·";content:"·" / "";margin-right:6px}
 @media (max-width:700px){.tmr-app-current{font-size:13px}}
+@media(pointer:coarse){.tmr-app-row{margin-top:0}}
