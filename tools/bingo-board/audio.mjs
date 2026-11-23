@@ -1,6 +1,10 @@
 // Playback lifecycle wraps the shared Vocabulary Library audio functions.
+// AI Voice that "ends" this soon after starting was not audible: a school iPad 7 reported
+// 68 ms of silent speech for a two-syllable word, which takes well over half a second to say.
+export const MIN_AI_SPEECH_MS = 300;
+
 export function createAudioPlayer({ getVoice, playTeacherVoice, speakMandarin, canUseAiVoice,
-  stopAi = () => {}, onStatus = () => {}, onPlaybackStart = () => {}, schedule = setTimeout, unschedule = clearTimeout }) {
+  stopAi = () => {}, onStatus = () => {}, onPlaybackStart = () => {}, schedule = setTimeout, unschedule = clearTimeout, now = () => Date.now() }) {
   const cache = new Map();
   // Definite lookup results for this page ('' = no Teacher Voice recording). Failed or timed-out
   // lookups are not stored, so they are retried as before.
@@ -44,9 +48,9 @@ export function createAudioPlayer({ getVoice, playTeacherVoice, speakMandarin, c
       if (turn !== generation || settled || fallingBack) return;
       fallingBack = true; clearWatchdog(); activeAudio?.pause(); activeAudio = null;
       if (!entry.aiEnabled || !canUseAiVoice()) { fail(); return; }
-      watchdog = schedule(fail, 12000); aiAttempted = true;
+      watchdog = schedule(fail, 12000); aiAttempted = true; let aiStartedAt = null;
       report('loading', 'Preparing AI Voice…');
-      try { speakMandarin(entry.chinese, { onStart: () => { if (turn !== generation || settled) return; onPlaybackStart(); report('playing', 'AI Voice playback started. If you hear nothing, check your volume or retry.'); clearWatchdog(); watchdog = schedule(fail, 45000); }, onEnd: finish, onUnavailable: fail, onError: fail }); }
+      try { speakMandarin(entry.chinese, { onStart: () => { if (turn !== generation || settled) return; aiStartedAt = now(); onPlaybackStart(); report('playing', 'AI Voice playback started. If you hear nothing, check your volume or retry.'); clearWatchdog(); watchdog = schedule(fail, 45000); }, onEnd: () => { if (aiStartedAt !== null && now() - aiStartedAt >= MIN_AI_SPEECH_MS) finish(); else fail(); }, onUnavailable: fail, onError: fail }); }
       catch { fail(); }
     };
     if (!url) { fallback(); return; }

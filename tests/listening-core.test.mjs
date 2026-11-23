@@ -98,8 +98,9 @@ test('answers: correct, gentle incorrect, repeated wrong tap and invalid', () =>
 
 // Audio player: same order as Bingo Solo — Teacher Voice first, AI Voice only as a fallback.
 function fakeTimers() {
-  let id = 0; const timers = new Map();
-  return { schedule: (fn, ms) => { timers.set(++id, { fn, ms }); return id; }, unschedule: t => timers.delete(t),
+  let id = 0, clock = 0; const timers = new Map();
+  return { now: () => clock, advance: ms => { clock += ms; },
+    schedule: (fn, ms) => { timers.set(++id, { fn, ms }); return id; }, unschedule: t => timers.delete(t),
     fire: ms => { for (const [key, timer] of [...timers]) if (timer.ms === ms) { timers.delete(key); timer.fn(); } } };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -116,7 +117,7 @@ test('audio: AI Voice is the fallback when there is no recording or it fails', a
   const calls = [], statuses = [], t = fakeTimers();
   const player = createAudioPlayer({ ...t, getVoice: async entry => entry.key === 'b' ? 'https://teacher/b' : '', canUseAiVoice: () => true,
     playTeacherVoice: (url, cb) => { calls.push('teacher'); cb.onError(); return { pause() {} }; },
-    speakMandarin: (text, cb) => { calls.push(`ai:${text}`); cb.onStart(); cb.onEnd(); }, onStatus: s => statuses.push(s.kind) });
+    speakMandarin: (text, cb) => { calls.push(`ai:${text}`); cb.onStart(); t.advance(900); cb.onEnd(); }, onStatus: s => statuses.push(s.kind) });
   await player.play({ key: 'a', chinese: '猫', aiEnabled: true });
   await player.play({ key: 'b', chinese: '狗', aiEnabled: true });
   assert.deepEqual(calls, ['ai:猫', 'teacher', 'ai:狗']);
