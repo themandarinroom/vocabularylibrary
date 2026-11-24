@@ -1,7 +1,7 @@
 // Seeded puzzle generation: build and validate the solved puzzle first, then derive the playable start.
 import { createRandom, normaliseSeed } from './random.mjs';
-import { compileTemplate, getTemplate } from './templates.mjs';
-import { getMode, getLevel } from './modes.mjs';
+import { compileTemplate, getTemplate, STUDENT_TEMPLATES } from './templates.mjs';
+import { getMode, getLevel, MODES } from './modes.mjs';
 import { UP_DIRS, edgeDirection, norm } from './geometry.mjs';
 import { checkCompletion } from './validate.mjs';
 import { stateProblems } from './state.mjs';
@@ -137,5 +137,27 @@ export function availableOptions(entries, levelId, limits = LABEL_LIMITS) {
       return { templateId, name: template.name, pieceCount: template.pieceCount, requiredPairs: template.requiredPairs, available,
         reason: available ? '' : `This puzzle requires ${template.requiredPairs} different words. Please select more vocabulary sets.` };
     }) };
+  });
+}
+
+// v0.1 student entry point: any offered shape with any matching mode (shape = spatial challenge, mode = language
+// challenge). The shape's approved starting pieces are used; nothing else depends on a level.
+export function createStudentPuzzle({ entries, templateId, modeId, seed, limits }) {
+  const offer = STUDENT_TEMPLATES.find(t => t.id === templateId);
+  if (!offer) throw new Error('That puzzle shape is not available.');
+  getMode(modeId);
+  const template = getTemplate(templateId);
+  const start = offer.start ? template.startingConfigurations.find(c => c.id === offer.start) : null;
+  return generatePuzzle({ entries, template: templateId, modeId, seed, limits,
+    startingPieces: start ? start.slots.length : 0, startConfigId: start?.id });
+}
+
+// Every offered shape × every mode for a word pool: usable words, availability and the reason when unavailable.
+export function studentOptions(entries, limits = LABEL_LIMITS) {
+  const usable = Object.fromEntries(Object.values(MODES).map(m => [m.id, usableCount(entries, m.sides, limits)]));
+  return STUDENT_TEMPLATES.map(({ id }) => {
+    const t = getTemplate(id);
+    return { templateId: id, name: t.name, pieceCount: t.pieceCount, requiredPairs: t.requiredPairs,
+      modes: Object.values(MODES).map(m => ({ modeId: m.id, label: m.label, usable: usable[m.id], available: usable[m.id] >= t.requiredPairs })) };
   });
 }

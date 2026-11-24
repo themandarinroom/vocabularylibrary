@@ -9,7 +9,8 @@ export function tarsiaCompletionRecord(puzzle, state, { vocabularySets, student,
   const verdict = checkCompletion(puzzle, state, template);
   if (!verdict.complete) throw new Error('A learning record can only be made for a completed puzzle.');
   const mode = getMode(puzzle.modeId);
-  const level = puzzle.levelId ? getLevel(puzzle.levelId) : { id: 'custom', label: 'Custom' };
+  // v0.1 student puzzles have no level: the record names the shape instead (pieces and pairs from the template).
+  const level = puzzle.levelId ? getLevel(puzzle.levelId) : { id: template.id, label: `${template.name} · ${template.pieceCount} pieces · ${template.requiredPairs} pairs` };
   // The actual finished board, as the student completed it (labels per slot edge, in slot-direction order).
   const slots = template.slots.map(slot => ({ slot: slot.id, row: slot.row, col: slot.col, up: slot.up,
     edges: slot.dirs.map(dir => { const l = labelAt(puzzle, state, template, slot.id, dir); return l ? { dir, kind: l.kind, side: l.side, text: l.text, image: l.image } : { dir, blank: true }; }) }));
@@ -21,6 +22,6 @@ export function tarsiaCompletionRecord(puzzle, state, { vocabularySets, student,
     matchesCompleted: template.requiredPairs,
     learningIntention: mode.learningIntention,
     successCriteria: successCriteria(template.requiredPairs),
-    content: { kind: 'tarsia-board', templateId: template.id, shape: template.shape, slots }
+    content: { kind: 'tarsia-board', templateId: template.id, shape: template.shape, shapeName: template.name, pieceCount: template.pieceCount, pairs: template.requiredPairs, slots }
   });
 }

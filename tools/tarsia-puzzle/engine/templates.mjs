@@ -7,7 +7,7 @@ const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from
 
 // Verified against TarsiaPuzzle_11words.pdf: 2 rows × 5, ▲▼▲▼▲ over ▼▲▼▲▼; 10 pieces, 11 shared edges, 8 boundary.
 const HEXAGON_10 = {
-  id: 'hexagon-10', name: 'Long hexagon', shape: 'long-hexagon',
+  id: 'hexagon-10', name: 'Extended Hexagon', shape: 'extended-hexagon',
   cells: [...range(0, 4).map(c => [0, c]), ...range(0, 4).map(c => [1, c])],
   startingConfigurations: [
     // Decision D2 default: the two centre pieces, adjacent, show one finished match.
@@ -18,7 +18,7 @@ const HEXAGON_10 = {
 
 // Verified against TarsiaPuzzle_18words_Countries.pdf: side-4 triangle, rows of 1/3/5/7; 16 pieces, 18 shared, 12 boundary.
 const TRIANGLE_16 = {
-  id: 'triangle-16', name: 'Triangle', shape: 'triangle',
+  id: 'triangle-16', name: 'Large Triangle', shape: 'triangle',
   cells: range(0, 3).flatMap(r => range(4 - r, 4 + r).map(c => [r, c])),
   startingConfigurations: [
     // The centre ▲ is the only slot whose three edges all meet neighbours and it sits on the board's centroid.
@@ -27,7 +27,34 @@ const TRIANGLE_16 = {
   ]
 };
 
-export const TEMPLATES = Object.freeze([HEXAGON_10, TRIANGLE_16]);
+// Revised v0.1 student shapes (≤ 12 word pairs). Counts are derived from the cells, never typed in.
+const SMALL_TRIANGLE_4 = {
+  id: 'small-triangle-4', name: 'Small Triangle', shape: 'triangle',
+  cells: [[0, 2], [1, 1], [1, 2], [1, 3]],                       // 3 pairs
+  startingConfigurations: [{ id: 'corner', name: 'One corner', slots: ['r1c1'] }]
+};
+const HEXAGON_6 = {
+  id: 'hexagon-6', name: 'Hexagon', shape: 'hexagon',
+  cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]],       // 6 pairs
+  startingConfigurations: [{ id: 'top', name: 'Top middle', slots: ['r0c1'] }]
+};
+const TRIANGLE_9 = {
+  id: 'triangle-9', name: 'Triangle', shape: 'triangle',
+  cells: [[0, 4], [1, 3], [1, 4], [1, 5], [2, 2], [2, 3], [2, 4], [2, 5], [2, 6]], // 9 pairs
+  startingConfigurations: [{ id: 'below-apex', name: 'Below the top', slots: ['r1c4'] }, { id: 'apex', name: 'Top corner', slots: ['r0c4'] }]
+};
+
+export const TEMPLATES = Object.freeze([SMALL_TRIANGLE_4, HEXAGON_6, TRIANGLE_9, HEXAGON_10, TRIANGLE_16]);
+
+// What students can choose in v0.1, in order, with the approved locked starting pieces (null = none).
+// The 18-pair Large Triangle stays in the engine and its tests but is not offered (deferred).
+export const STUDENT_TEMPLATES = Object.freeze([
+  Object.freeze({ id: 'small-triangle-4', start: null }),
+  Object.freeze({ id: 'hexagon-6', start: 'top' }),
+  Object.freeze({ id: 'triangle-9', start: 'below-apex' }),
+  Object.freeze({ id: 'hexagon-10', start: 'centre-pair' })
+]);
+export const MAX_STUDENT_PAIRS = 12;
 
 export class TemplateError extends Error {}
 

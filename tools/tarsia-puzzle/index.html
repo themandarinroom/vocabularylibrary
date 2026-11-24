@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Tarsia Puzzle · The Mandarin Room</title>
   <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-b2">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-b3-2">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to setup</a>
@@ -20,6 +20,12 @@
       </span>
     </div>
     <span class="phase-badge">v0.1 · Solo</span>
+  </header>
+
+  <header class="game-header" aria-label="The Mandarin Room">
+    <a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="../../assets/brand/emblem-header.png" width="44" height="42" alt=""></a>
+    <span class="brand"><a href="https://themandarinroom.au/">The Mandarin Room</a><span class="crumbs"><a href="https://themandarinroom.au/#/activities/vocabulary-games">Vocabulary Games</a> · Tarsia Puzzle</span></span>
+    <p class="game-tags"><span id="game-level" class="tag level"></span><span id="game-mode" class="tag"></span><span id="game-sets" class="sets-line"></span></p>
   </header>
 
   <main id="main" class="setup-screen tarsia-setup">
@@ -50,17 +56,13 @@
 
         <div class="right-column">
           <section class="panel" aria-labelledby="s2">
-            <div class="panel-heading"><span class="step" aria-hidden="true">2</span><h2 id="s2">Choose a level</h2></div>
-            <div class="panel-body"><fieldset class="choice-row" id="levels"><legend class="sr-only">Level</legend></fieldset></div>
+            <div class="panel-heading"><span class="step" aria-hidden="true">2</span><h2 id="s2">Choose a puzzle shape</h2></div>
+            <div class="panel-body"><fieldset class="shape-grid" id="shapes"><legend class="sr-only">Puzzle shape</legend></fieldset></div>
           </section>
           <section class="panel" aria-labelledby="s3">
             <div class="panel-heading"><span class="step" aria-hidden="true">3</span><h2 id="s3">Choose how to match</h2></div>
-            <div class="panel-body"><fieldset class="mode-list" id="modes"><legend class="sr-only">Matching</legend></fieldset></div>
-          </section>
-          <section class="panel" aria-labelledby="s4">
-            <div class="panel-heading"><span class="step" aria-hidden="true">4</span><h2 id="s4">Puzzle shape</h2></div>
             <div class="panel-body">
-              <fieldset class="choice-row" id="shapes"><legend class="sr-only">Puzzle shape</legend></fieldset>
+              <fieldset class="mode-list" id="modes"><legend class="sr-only">Matching</legend></fieldset>
               <div id="setup-feedback" aria-live="polite"></div>
               <div class="start-bar">
                 <p id="ready" class="notice ready-line" role="status"></p>
@@ -72,7 +74,42 @@
         </div>
       </div>
     </section>
+
+    <section id="game" class="game-screen" aria-labelledby="game-title" hidden>
+      <h1 id="game-title" class="sr-only">Tarsia Puzzle</h1>
+      <div class="game-bar">
+        <div class="progress-row"><div id="progress" class="progress" role="progressbar" aria-label="Correct matches" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"><span id="progress-bar"></span></div>
+          <span id="progress-text" class="progress-text" aria-live="polite"></span></div>
+        <div class="game-controls">
+          <span class="mode-toggle" role="group" aria-label="How to move pieces"><button id="mode-drag" type="button" aria-pressed="true">Drag</button><button id="mode-tap" type="button" aria-pressed="false">Tap to place</button></span>
+          <span class="tap-tools" id="tap-tools" hidden><button id="turn-btn" type="button" class="tool-button" disabled>↻ Turn</button><button id="back-btn" type="button" class="tool-button" disabled>Back to tray</button></span>
+          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank <span lang="zh-Hans">词库</span></button>
+          <button id="shuffle-btn" type="button" class="tool-button">Shuffle</button>
+          <button id="restart-btn" type="button" class="tool-button">Restart</button>
+          <button id="setup-btn" type="button" class="tool-button">Setup</button>
+        </div>
+      </div>
+      <p id="complete-note" class="complete-note" role="status" hidden></p>
+      <div id="workspace" class="workspace">
+        <div id="board-wrap" class="board-wrap"><svg id="board" class="board" role="img" aria-label="Puzzle board"></svg></div>
+        <section id="tray" class="tray" aria-label="Pieces to place">
+          <p id="tray-count" class="tray-count"></p>
+          <div id="tray-list" class="tray-list"></div>
+        </section>
+      </div>
+      <aside id="word-bank" class="word-bank" role="dialog" aria-modal="false" aria-labelledby="bank-title" hidden>
+        <div class="bank-head"><h2 id="bank-title">Word Bank <span lang="zh-Hans">词库</span></h2><button id="bank-close" type="button" class="tool-button">Close</button></div>
+        <p class="help">Use these words to help you. It's fine to look!</p>
+        <ul id="bank-list" class="bank-list"></ul>
+      </aside>
+    </section>
   </main>
+
+  <svg id="drag-ghost" class="drag-ghost" aria-hidden="true" focusable="false" hidden></svg>
+  <dialog id="confirm" class="confirm">
+    <form method="dialog"><p id="confirm-text"></p>
+      <div class="confirm-actions"><button value="cancel" class="secondary-button">Keep playing</button><button id="confirm-ok" value="ok" class="primary-button">OK</button></div></form>
+  </dialog>
 
   <div class="touch-start" id="touch-start" hidden>
     <p id="touch-ready"></p>

@@ -164,3 +164,97 @@ fieldset.choice-row,fieldset.mode-list{border:0;padding:0;margin:0;min-width:0}
   .touch-start{flex-direction:column;align-items:stretch}.touch-start .primary-button{width:100%}
   footer.site-footer{grid-template-columns:1fr;text-align:center;gap:4px}.site-footer span{text-align:center!important}
 }
+
+/* ================= Puzzle workspace (Phase B3.1 prototype) ================= */
+:root{--ws-page:#FAF9F5;--ws-board:#F0F1E9;--ws-piece:#FFFDF8;--ws-locked:#C6D8B9;--ws-slot:#A8B49F;--ws-edge:#5d6f57;--ws-match:#3f9a5c}
+body.playing{background:var(--ws-page)}
+body.playing #setup,body.playing .touch-start,body.playing footer.site-footer{display:none!important}
+body.playing{padding-bottom:0}
+body.playing .setup-screen{max-width:none;padding:0}
+.game-screen{display:flex;flex-direction:column;height:calc(100dvh - var(--header));min-height:440px;padding:8px max(1.6vw,10px) calc(8px + env(safe-area-inset-bottom));gap:8px;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.game-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.game-info{min-width:0;flex:1 1 360px}
+.game-tags{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:0 0 6px;font-size:14px}
+.tag{background:#e4f1e5;color:var(--deep);border-radius:20px;padding:3px 10px;font-weight:750}
+.tag.level{background:var(--yellow);color:var(--ink)}
+.sets-line{color:var(--muted);font-size:13px;min-width:0;overflow-wrap:anywhere}
+.progress-row{display:flex;align-items:center;gap:10px}
+.progress{flex:1;max-width:320px;height:10px;border-radius:10px;background:#e2e6da;overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:var(--ws-match);border-radius:10px;transition:width .25s}
+.progress-text{font-weight:800;font-size:15px;white-space:nowrap}
+.game-controls{display:flex;flex-wrap:wrap;gap:8px}
+.tool-button{min-height:44px;padding:8px 14px;border-radius:12px;border:2px solid #b7c9bb;background:#fff;color:var(--deep);font-weight:750;font-size:15px}
+.tool-button[aria-expanded="true"]{background:#e4f1e5;border-color:var(--deep)}
+.complete-note{margin:0;padding:10px 14px;border-radius:12px;background:#e4f1e5;border:1px solid #9fd0ae;font-weight:750}
+.workspace{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) clamp(230px,27vw,330px);gap:10px}
+.board-wrap{position:relative;min-height:0;min-width:0;background:var(--ws-board);border-radius:20px;overflow:hidden}
+.board{position:absolute;inset:0;display:block;touch-action:none}
+.slot{fill:transparent;stroke:var(--ws-slot);stroke-width:1.6;stroke-dasharray:6 5}
+.slot.hover{fill:#dfeccf;stroke:var(--ws-match);stroke-width:3;stroke-dasharray:none}
+.piece-shadow{fill:#5b6b4c;opacity:.16}
+.piece-face{fill:var(--ws-piece);stroke:var(--ws-edge);stroke-width:1.6;stroke-linejoin:round}
+.piece-face.locked{fill:var(--ws-locked)}
+.lock{fill:none;stroke:#46613f;stroke-width:1.6;stroke-linejoin:round;opacity:.8}
+.piece{cursor:grab;touch-action:none}.piece.is-locked{cursor:default}
+.piece:focus-visible .piece-face,.tray-item:focus-visible{outline:none;stroke:#e09b16;stroke-width:4}
+.lifted{opacity:.25}
+.label{font-weight:600;pointer-events:none}
+.label.hanzi{fill:#111}.label.pinyin{fill:#a3150c}.label.english{fill:#0b3f7a}
+.match-mark{stroke:var(--ws-match);stroke-width:5;stroke-linecap:round;opacity:.85;pointer-events:none}
+.pic-missing{fill:#f3f3ee;stroke:#c5c9bd;stroke-dasharray:4 3}
+image{pointer-events:none}
+.tray{min-height:0;min-width:0;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:20px;padding:10px 12px}
+.tray.drop-here{background:#eef6ea;border-color:var(--ws-match)}
+.tray-count{margin:0 0 6px;font-size:14px;font-weight:750;color:var(--muted)}
+.tray-list{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;justify-content:center;overscroll-behavior:contain}
+.tray-item{width:var(--piece-w);height:var(--piece-h);touch-action:pan-y;cursor:grab;border-radius:8px}
+.tray-item svg{width:100%;height:100%;display:block;overflow:visible}
+.drag-ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;overflow:visible;filter:drop-shadow(0 10px 12px #2c3a2a40)}
+.word-bank{position:fixed;z-index:40;top:calc(var(--header) + 8px);right:10px;bottom:10px;width:min(360px,calc(100vw - 20px));background:#fffdf8;border:1px solid var(--line);border-radius:20px;
+  box-shadow:0 18px 40px #1b504330;padding:14px 16px;display:flex;flex-direction:column}
+.bank-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.bank-head h2{margin:0;font-size:20px}
+.bank-list{list-style:none;margin:8px 0 0;padding:0;overflow:auto;-webkit-overflow-scrolling:touch;display:grid;gap:8px}
+.bank-list li{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid #dfe6db;border-radius:12px;padding:8px 10px}
+.bank-list img,.bank-list .no-pic{width:64px;height:44px;object-fit:contain;flex-shrink:0}
+.bank-list strong{display:block;font-size:22px}.bank-list .py{display:block;color:#a3150c;font-weight:650}.bank-list .en{display:block;color:#0b3f7a;font-size:14px}
+.confirm{border:0;border-radius:20px;padding:22px;max-width:min(440px,92vw);box-shadow:0 18px 40px #1b504340}
+.confirm::backdrop{background:#17302a55}
+.confirm p{font-size:17px;margin-bottom:16px}
+.confirm-actions{display:flex;gap:10px;flex-wrap:wrap}.confirm-actions button{flex:1;min-height:52px;font-size:17px;width:auto}
+/* Portrait: board above, tray below as a strip that scrolls sideways (dragging up to the board is a drag, not a scroll) */
+@media (orientation:portrait){
+  .workspace{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) clamp(150px,22dvh,230px)}
+  .tray-list{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;align-items:center}
+  .tray-item{touch-action:pan-x;flex-shrink:0}
+  .word-bank{top:auto;left:10px;right:10px;width:auto;height:min(62dvh,560px)}
+}
+
+/* ================= Revised v0.1 (B3.2): shape step, compact gameplay header, Tap-to-place ================= */
+fieldset.shape-grid{border:0;padding:0;margin:0;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.shape-choice svg{width:70px;height:60px}
+@media (max-width:560px){fieldset.shape-grid{grid-template-columns:1fr}}
+/* Gameplay: the standard header is replaced by a 68 px compact header (same branding, links and navigation). */
+.game-header{display:none}
+body.playing .tool-header{display:none}
+body.playing .game-header{display:flex;align-items:center;gap:12px;height:68px;padding:0 max(1.6vw,12px);padding-top:env(safe-area-inset-top);background:#fff;border-bottom:1px solid #e3e7de}
+.game-header .tmr-emblem{width:44px;height:auto}
+.game-header .brand{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.game-header .brand a{color:var(--tmr-ink,#0c193b);font-weight:700;font-size:17px;text-decoration:none}
+.game-header .brand .crumbs{font-size:13px;color:#617797}.game-header .brand .crumbs a{font-size:13px;font-weight:550;color:#617797}
+.game-header .game-tags{margin:0 0 0 auto;justify-content:flex-end}
+body.playing .game-screen{height:calc(100dvh - 68px)}
+.mode-toggle{display:inline-flex;border:2px solid #b7c9bb;border-radius:12px;overflow:hidden}
+.mode-toggle button{min-height:40px;padding:6px 12px;border:0;background:#fff;color:var(--deep);font-weight:750;font-size:14px}
+.mode-toggle button[aria-pressed="true"]{background:var(--deep);color:#fff}
+.tap-tools[hidden]{display:none!important}
+.selected .piece-face,.tray-item.selected{filter:drop-shadow(0 0 0 #e09b16)}
+.piece.selected .piece-face{stroke:#e09b16;stroke-width:4}
+.tray-item.selected{outline:none;background:#fff1cc;box-shadow:inset 0 0 0 4px #e09b16;border-radius:12px}
+.slot.tap-target{fill:#f6efd6;stroke:#d49a1e;stroke-dasharray:none;stroke-width:2.2}
+.game-bar .help-line{font-size:13px;color:var(--muted);margin:0}
+@media (orientation:portrait){
+  .game-header .sets-line{display:none}
+  .game-bar{display:grid;grid-template-columns:1fr;gap:6px}
+  .game-controls{justify-content:flex-start}
+}

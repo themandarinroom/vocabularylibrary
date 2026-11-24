@@ -25,3 +25,11 @@ Prototype: serve the repository root and open `/tools/tarsia-puzzle/dev/` (for e
 - Prototype with published data: `dev/?source=published&sets=<id>,<id>&level=…&mode=…&seed=…`. Add `&panel=hide` to give the board the full width.
 
 - **Student Setup (Phase B2):** `index.html`, `app.mjs`, `bootstrap.mjs` and `styles.css`. The styles are copied from Build the Great Wall, not imported. The setup rules live in `setup-model.mjs`, which uses no DOM and is tested. Shareable state: `?set=<id>,<id>&level=beginner|master&mode=<mode>`. Until the Phase B3 game screen exists, Start opens the engine prototype (`dev/`) with the chosen settings.
+
+- **Revised v0.1 (B3.2):** students choose vocabulary, shape and matching mode independently.
+  - Shapes (`STUDENT_TEMPLATES`): Small Triangle 4/3, Hexagon 6/6, Triangle 9/9, Extended Hexagon 10/11 (pieces/pairs). Locked starting pieces: none / 1 / 1 / 2. The 18-pair Large Triangle is kept in the engine but not offered.
+  - `createStudentPuzzle` accepts any offered shape with any mode.
+  - Workspace (`workspace.mjs`): labels are printed on the pieces (side A baseline towards its edge, side B top towards it) and turn with them. There is no upright correction; only the Word Bank is upright.
+  - Measured label layout (`label-layout.mjs`): minimum 18 px Hanzi and 14 px Pinyin/English, nothing truncated.
+  - Compact 68 px gameplay header. Drag & Drop by default, with an optional Tap-to-place mode (tap selects; the Turn button rotates).
+  - `dev/sweep.mjs` measures every shape at the current viewport.

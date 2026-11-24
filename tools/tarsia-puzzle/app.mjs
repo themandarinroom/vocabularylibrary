@@ -53,29 +53,24 @@ function render() {
   $('chosen-badge').textContent = `${view.setCount} chosen`;
   $('set-summary').textContent = view.setCount ? `${view.setCount} ${view.setCount === 1 ? 'set' : 'sets'} · ${view.words} different words${view.duplicates ? ` (${view.duplicates} repeated, counted once)` : ''}` : '';
 
-  $('levels').innerHTML = '<legend class="sr-only">Level</legend>' + view.levels.map(l => `
-    <label class="choice${l.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="level" value="${l.id}" ${l.selected ? 'checked' : ''}>${shapeIcon(l.templateId)}
-      <span><strong>${esc(l.label)}<span lang="zh-Hans">${esc(l.chinese)}</span></strong><small>${l.requiredPairs} word pairs · ${l.startingPieces} ${l.startingPieces === 1 ? 'piece' : 'pieces'} placed for you</small>
-      ${!l.available && view.setCount ? `<small class="need">Needs ${l.requiredPairs} words · you have ${l.best}</small>` : ''}</span></label>`).join('');
+  $('shapes').innerHTML = '<legend class="sr-only">Puzzle shape</legend>' + view.shapes.map(sh => `
+    <label class="choice shape-choice${sh.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="shape" value="${sh.templateId}" ${sh.selected ? 'checked' : ''}>${shapeIcon(sh.templateId, 70, 60)}
+      <span><strong>${esc(sh.name)}</strong><small>${sh.pieceCount} pieces · ${sh.requiredPairs} word pairs</small>${sh.available || !view.setCount ? '' : `<small class="need">${esc(sh.reason)}</small>`}</span></label>`).join('');
 
   $('modes').innerHTML = '<legend class="sr-only">Matching</legend>' + view.modes.map(m => `
     <label class="mode${m.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="mode" value="${m.modeId}" ${m.selected ? 'checked' : ''}>
       <span class="mode-top"><strong>${esc(m.label)}</strong><span class="count ${m.available ? 'ok' : 'short'}">${m.available ? `${m.usable} words ready` : `${m.usable} of ${m.required} words`}</span></span>
       ${m.example ? `<span class="example" aria-hidden="true">${part(m.example[0])}<span class="pair-line"></span>${part(m.example[1])}</span>` : ''}</label>`).join('');
 
-  $('shapes').innerHTML = '<legend class="sr-only">Puzzle shape</legend>' + view.shapes.map(s => `
-    <label class="choice${s.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="shape" value="${s.templateId}" ${s.selected ? 'checked' : ''}>${shapeIcon(s.templateId)}
-      <span><strong>${esc(s.name)}</strong><small>${s.pieceCount} pieces · ${s.requiredPairs} word pairs</small></span></label>`).join('');
-
   const f = view.feedback;
   $('setup-feedback').innerHTML = !f || !sets.length ? '' : `<div class="tz-feedback">${f.kind === 'too-few'
-    ? `<strong>This puzzle needs ${f.required} different words.</strong>Your sets have ${f.usable} ${f.usable === 1 ? 'word' : 'words'} that work with ${esc(f.modeLabel)}. Please choose another Vocabulary Set.`
+    ? `<strong>The ${esc(f.shapeName)} needs ${f.required} different words.</strong>Your sets have ${f.usable} ${f.usable === 1 ? 'word' : 'words'} that work with ${esc(f.modeLabel)}. Add another Vocabulary Set${f.smallerShapes.length ? `, or choose a smaller shape (${esc(f.smallerShapes.join(', '))})` : ''}.`
     : `<strong>${esc(f.message)}</strong>`}
     ${f.suggestions.length ? `<div class="suggest">${f.suggestions.map(s => `<button type="button" data-add="${esc(s.id)}" aria-label="Add ${esc(s.title)}">+ ${esc(s.title)}</button>`).join('')}</div>` : ''}</div>`;
   const readyText = view.ready ? `Ready: ${view.summary}` : 'Not ready yet — choose your words.';
   $('ready').textContent = readyText;
   $('touch-ready').textContent = view.ready ? readyText : f?.kind === 'too-few'
-    ? `Needs ${f.required} words · you have ${f.usable}. Choose another Vocabulary Set.` : 'Choose one or more Vocabulary Sets to begin.';
+    ? `The ${f.shapeName} needs ${f.required} words · you have ${f.usable}.` : 'Choose one or more Vocabulary Sets to begin.';
   $('start').disabled = !view.ready; $('touch-start-button').disabled = !view.ready;
   $('touch-start').hidden = false;
   history.replaceState(null, '', `?${selectionToParams(selection)}`);
@@ -102,8 +97,7 @@ function hero() {
 document.addEventListener('change', event => {
   const input = event.target;
   if (input.name === 'set') selection = { ...selection, setIds: input.checked ? [...selection.setIds, input.value] : selection.setIds.filter(id => id !== input.value) };
-  else if (input.name === 'level') selection = { ...selection, levelId: input.value, modeId: null, templateId: null };
-  else if (input.name === 'mode') selection = { ...selection, modeId: input.value, templateId: null };
+  else if (input.name === 'mode') selection = { ...selection, modeId: input.value };
   else if (input.name === 'shape') selection = { ...selection, templateId: input.value };
   else return;
   render();
@@ -114,12 +108,21 @@ document.addEventListener('click', event => {
   const add = event.target.closest('[data-add]');
   if (add) { selection = { ...selection, setIds: [...selection.setIds, add.dataset.add] }; render(); $('start').focus({ preventScroll: true }); }
 });
-function start() {
+async function start() {
   if (!view?.ready) return;
-  // Interim until the Phase B3 game screen: the approved engine prototype plays the configured puzzle.
-  const p = new URLSearchParams({ source: 'published', sets: view.start.setIds.join(','), level: view.start.levelId, mode: view.start.modeId, seed: String(randomSeed()), panel: 'hide' });
-  location.href = `./dev/?${p}`;
+  const { createStudentPuzzle, getTemplate: template } = await import('./engine/index.mjs');
+  const { openWorkspace } = await import('./workspace.mjs');
+  const { mergeSets } = await import('../vocabulary-games-core/vocabulary.mjs');
+  const chosen = view.start.setIds.map(id => sets.find(s => s.id === id)).filter(Boolean);
+  const puzzle = createStudentPuzzle({ entries: mergeSets(sets, view.start.setIds).entries, templateId: view.start.templateId, modeId: view.start.modeId, seed: randomSeed() });
+  document.body.classList.add('playing');
+  $('game').hidden = false;
+  window.scrollTo(0, 0);
+  workspace = await openWorkspace({ puzzle, template: template(puzzle.templateId), sets: chosen.map(s => ({ id: s.id, title: s.title, chineseTitle: s.chineseTitle })),
+    onExit: () => { workspace = null; $('game').hidden = true; document.body.classList.remove('playing', 'puzzle-complete'); render(); $('start').focus({ preventScroll: true }); } });
+  window.__tarsiaWorkspace = workspace; // diagnostics only
 }
+let workspace = null;
 $('start').addEventListener('click', start);
 $('touch-start-button').addEventListener('click', start);
 $('reload').addEventListener('click', load);
