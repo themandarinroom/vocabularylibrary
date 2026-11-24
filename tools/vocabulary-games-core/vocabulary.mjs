@@ -32,8 +32,10 @@ export function catalogueFromSets(sourceSets, options = {}) {
         pinyin: typeof item.pinyin === 'string' ? item.pinyin : '', english: text(item.english),
         image: itemImage(item, options), imageStoragePath: text(item.imageStoragePath) }));
     }
+    // Set cover for the setup screen (display only): https, no credentials.
+    const cover = itemImage({ image: source.coverImage }, options);
     sets.push(Object.freeze({ id: setId, title: text(source.title) || setId, chineseTitle: text(source.chineseTitle),
-      yearLevel: source.yearLevel, items: Object.freeze(items) }));
+      yearLevel: source.yearLevel, cover, items: Object.freeze(items) }));
   }
   return { sets: Object.freeze(sets), diagnostics };
 }

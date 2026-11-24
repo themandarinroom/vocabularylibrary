@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tarsia Puzzle · The Mandarin Room</title>
+  <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-b2">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to setup</a>
+  <header class="tool-header tmr-unified-header">
+    <div class="tmr-brand">
+      <a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="../../assets/brand/emblem-header.png" width="56" height="53" alt=""></a>
+      <span class="tmr-brand-text">
+        <a class="tmr-home-link" href="https://themandarinroom.au/">The Mandarin Room</a>
+        <span class="tmr-app-row"><a class="tmr-app-link" href="https://themandarinroom.au/#/activities/vocabulary-games">Vocabulary Games</a><span class="tmr-app-current">Tarsia Puzzle</span></span>
+      </span>
+    </div>
+    <span class="phase-badge">v0.1 · Solo</span>
+  </header>
+
+  <main id="main" class="setup-screen tarsia-setup">
+    <p id="boot-status" class="notice" role="status">Starting Tarsia Puzzle… If this does not finish, check your connection and reload this page.</p>
+    <button id="boot-retry" type="button" class="secondary-button" hidden>Reload page</button>
+
+    <section id="setup" aria-labelledby="setup-title" hidden>
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">Vocabulary game</p>
+          <h1 id="setup-title">Tarsia Puzzle <span lang="zh-Hans">词语三角拼图</span></h1>
+          <p>Match each Chinese word with its partner to join the triangles. Finish the whole shape to complete the puzzle!</p>
+        </div>
+        <svg id="hero-art" class="hero-art" viewBox="0 0 520 300" aria-hidden="true" focusable="false"></svg>
+      </div>
+
+      <div class="setup-grid tarsia-grid">
+        <section class="panel" aria-labelledby="s1">
+          <div class="panel-heading"><span class="step" aria-hidden="true">1</span><h2 id="s1">Choose your words</h2><span id="chosen-badge" class="count-badge"></span></div>
+          <div class="panel-body">
+            <p class="field-label" id="sets-label">Vocabulary Sets <span class="field-hint">Choose one or more</span></p>
+            <div id="sets" class="set-cards" role="group" aria-labelledby="sets-label" aria-busy="true"><p class="help">Loading…</p></div>
+            <p id="set-summary" class="help" aria-live="polite"></p>
+            <div class="load-row"><p id="load-status" class="help" role="status">Loading published vocabulary…</p>
+              <button id="reload" type="button" class="text-button">Reload vocabulary</button></div>
+          </div>
+        </section>
+
+        <div class="right-column">
+          <section class="panel" aria-labelledby="s2">
+            <div class="panel-heading"><span class="step" aria-hidden="true">2</span><h2 id="s2">Choose a level</h2></div>
+            <div class="panel-body"><fieldset class="choice-row" id="levels"><legend class="sr-only">Level</legend></fieldset></div>
+          </section>
+          <section class="panel" aria-labelledby="s3">
+            <div class="panel-heading"><span class="step" aria-hidden="true">3</span><h2 id="s3">Choose how to match</h2></div>
+            <div class="panel-body"><fieldset class="mode-list" id="modes"><legend class="sr-only">Matching</legend></fieldset></div>
+          </section>
+          <section class="panel" aria-labelledby="s4">
+            <div class="panel-heading"><span class="step" aria-hidden="true">4</span><h2 id="s4">Puzzle shape</h2></div>
+            <div class="panel-body">
+              <fieldset class="choice-row" id="shapes"><legend class="sr-only">Puzzle shape</legend></fieldset>
+              <div id="setup-feedback" aria-live="polite"></div>
+              <div class="start-bar">
+                <p id="ready" class="notice ready-line" role="status"></p>
+                <button id="start" type="button" class="primary-button" disabled>Start puzzle <span lang="zh-Hans">开始</span></button>
+                <p class="help">No sign-in needed. Nothing is saved or uploaded. A Word Bank is there if you need help.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="touch-start" id="touch-start" hidden>
+    <p id="touch-ready"></p>
+    <button id="touch-start-button" type="button" class="primary-button" disabled>Start puzzle <span lang="zh-Hans">开始</span></button>
+  </div>
+
+  <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Tarsia Puzzle v0.1 · Nov 2026</span></footer>
+  <script type="module" src="./bootstrap.mjs"></script>
+</body>
+</html>

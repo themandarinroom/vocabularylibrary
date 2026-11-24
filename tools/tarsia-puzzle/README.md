@@ -23,3 +23,5 @@ Prototype: serve the repository root and open `/tools/tarsia-puzzle/dev/` (for e
 
 - `dev/report.html`: Phase B1 validation of real published vocabulary. It reads through the shared loader (read-only) and runs every set combination × mode with seeded generation. It also probes picture sizes and CORS. Options: `?titles=Countries I,Countries II,Countries III&seeds=500`.
 - Prototype with published data: `dev/?source=published&sets=<id>,<id>&level=…&mode=…&seed=…`. Add `&panel=hide` to give the board the full width.
+
+- **Student Setup (Phase B2):** `index.html`, `app.mjs`, `bootstrap.mjs` and `styles.css`. The styles are copied from Build the Great Wall, not imported. The setup rules live in `setup-model.mjs`, which uses no DOM and is tested. Shareable state: `?set=<id>,<id>&level=beginner|master&mode=<mode>`. Until the Phase B3 game screen exists, Start opens the engine prototype (`dev/`) with the chosen settings.
