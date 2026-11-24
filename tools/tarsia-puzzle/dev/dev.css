@@ -27,7 +27,7 @@ button.primary { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
 .piece { cursor: grab; }
 .piece.locked { cursor: default; }
 .piece.dragging { cursor: grabbing; opacity: .92; }
-.label { font-size: 16px; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.label { text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .label.hanzi { fill: #111; }
 .label.pinyin { fill: #b0170e; }
 .label.english { fill: #0d4b8f; }
@@ -38,7 +38,8 @@ button.primary { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
 .done pre { max-height: 260px; overflow: auto; background: #fff; padding: 8px; font-size: 12px; }
 .bank { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .bank div { background: #fff; border: 1px solid #dde2ec; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
-.bank img { width: 40px; height: 40px; float: right; }
+.bank img { width: 56px; height: 40px; object-fit: contain; float: right; } /* never crop or stretch flags */
 #debug-out { background: #fff; border: 1px solid #dde2ec; padding: 8px; font-size: 12px; max-height: 300px; overflow: auto; }
 .record-preview { width: 100%; height: auto; margin: 8px 0; border: 1px solid #c9d1e0; background: #fff; box-shadow: 0 2px 8px rgba(12,25,59,.08); }
 .record-preview .label { dominant-baseline: central; text-anchor: middle; }
+.no-panel main { grid-template-columns: 1fr; } .no-panel .controls { display: none; }

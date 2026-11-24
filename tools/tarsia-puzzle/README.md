@@ -20,3 +20,6 @@ Rotation (approved): a tap turns a piece 60° in the tray, or 120° on the board
 
 Tests: run `node --test tests/*.test.mjs` from the repository root (`tests/tarsia-engine.test.mjs`).
 Prototype: serve the repository root and open `/tools/tarsia-puzzle/dev/` (for example `?level=master&mode=hanzi-english&seed=7`).
+
+- `dev/report.html`: Phase B1 validation of real published vocabulary. It reads through the shared loader (read-only) and runs every set combination × mode with seeded generation. It also probes picture sizes and CORS. Options: `?titles=Countries I,Countries II,Countries III&seeds=500`.
+- Prototype with published data: `dev/?source=published&sets=<id>,<id>&level=…&mode=…&seed=…`. Add `&panel=hide` to give the board the full width.

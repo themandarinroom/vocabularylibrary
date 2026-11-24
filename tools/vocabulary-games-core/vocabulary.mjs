@@ -113,7 +113,9 @@ export function conflictKeys(entry, kind) {
   if (kind === 'hanzi') return [`hanzi:${hanziKey(entry.chinese)}`];
   if (kind === 'pinyin') return [`pinyin:${pinyinKey(entry.pinyin)}`];
   if (kind === 'english') return englishKeys(entry.english).map(sense => `english:${sense}`);
-  return imageKeys(entry).map(key => `picture:${key}`);
+  // A picture shows a meaning. Two words with the same English meaning (澳大利亚 / 澳洲, both "Australia") get
+  // pictures a student cannot tell apart even when the files differ, so they are kept apart in picture modes too.
+  return [...imageKeys(entry).map(key => `picture:${key}`), ...englishKeys(entry.english).map(sense => `picture-meaning:${sense}`)];
 }
 
 // Which merged words can show both representations of a matching mode.

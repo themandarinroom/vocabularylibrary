@@ -14,6 +14,7 @@ const $ = id => document.getElementById(id);
 const svg = $('svg');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const params = new URLSearchParams(location.search);
+if (params.get('panel') === 'hide') document.body.classList.add('no-panel'); // developer screenshots: board at full width
 
 let catalogue = { sets: [] }, puzzle = null, template = null, state = null, layout = null, drag = null;
 
@@ -78,7 +79,10 @@ function start() {
   state = resetState(puzzle);
   setMessage(`Seed ${puzzle.seed} · ${MODES[puzzle.modeId].label} · ${template.name}`);
   const query = new URLSearchParams({ level: puzzle.levelId, mode: puzzle.modeId, start: puzzle.startConfigId, seed: $('seed').value });
-  if (document.querySelector('input[name=source]:checked').value === 'fixtures') query.set('sets', selectedSetIds().join(','));
+  const sourceValue = document.querySelector('input[name=source]:checked').value;
+  if (sourceValue === 'published') query.set('source', 'published');
+  query.set('sets', selectedSetIds().join(','));
+  if (params.get('panel')) query.set('panel', params.get('panel'));
   history.replaceState(null, '', `?${query}`);
   layout = computeLayout();
   render();
@@ -124,7 +128,7 @@ function labelSvg(label, edgeIndex) {
   }
   const units = [...label.text].reduce((sum, ch) => sum + (/[㐀-鿿]/.test(ch) ? 1 : 0.56), 0);
   const size = Math.min(S * 0.11, (S * 0.52) / Math.max(units, 1));
-  return `<text class="label ${label.kind}" font-size="${size.toFixed(1)}" transform="translate(${x} ${y}) rotate(${rot})" lang="${label.kind === 'hanzi' ? 'zh-Hans' : 'en'}">${esc(label.text)}</text>`;
+  return `<text class="label ${label.kind}" style="font-size:${size.toFixed(1)}px" transform="translate(${x} ${y}) rotate(${rot})" lang="${label.kind === 'hanzi' ? 'zh-Hans' : 'en'}">${esc(label.text)}</text>`;
 }
 function pieceSvg(piece, pos, rotation, locked) {
   return `<g class="piece${locked ? ' locked' : ''}" data-id="${piece.id}" transform="translate(${pos.x} ${pos.y})"><g transform="rotate(${rotation * 60})">` +
@@ -205,7 +209,7 @@ function recordBoardSvg(content, box) {
       if (edge.kind === 'picture') { const z = side * 0.22; out.push(`<image href="${esc(edge.image)}" x="${-z / 2}" y="${-z / 2}" width="${z}" height="${z}" transform="translate(${x} ${y}) rotate(${rot})"/>`); continue; }
       const units = [...edge.text].reduce((sum, ch) => sum + (/[\u3400-\u9fff]/.test(ch) ? 1 : 0.56), 0);
       const size = Math.min(side * 0.11, (side * 0.52) / Math.max(units, 1));
-      out.push(`<text class="label ${edge.kind}" font-size="${size.toFixed(1)}" transform="translate(${x} ${y}) rotate(${rot})">${esc(edge.text)}</text>`);
+      out.push(`<text class="label ${edge.kind}" style="font-size:${size.toFixed(1)}px" transform="translate(${x} ${y}) rotate(${rot})">${esc(edge.text)}</text>`);
     }
   }
   return out.join('');
@@ -344,7 +348,9 @@ $('debug').addEventListener('change', () => puzzle && renderDebug());
 // Initial state from the URL (reproducible puzzles).
 if (params.get('level') in LEVELS) $('level').value = params.get('level');
 $('seed').value = params.get('seed') || String(normaliseSeed(randomSeed()));
-await loadSource('fixtures');
+const initialSource = params.get('source') === 'published' ? 'published' : 'fixtures';
+document.querySelector(`input[name=source][value=${initialSource}]`).checked = true;
+await loadSource(initialSource);
 if (params.get('mode')) { $('mode').value = params.get('mode'); refreshOptions(); }
 if (params.get('start')) $('start').value = params.get('start');
 if (!$('generate').disabled) start();
