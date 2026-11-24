@@ -24,11 +24,39 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
   title: "Countries",
   chineseTitle: "国家",
   description: "...",
+  topicId: "countries", // stable ID from js/topic-taxonomy.js; see "Topics" below
   items: [/* vocabulary items */]
 }
 ```
 
 `getSet(id)` and `getSets()` treat the current Firebase project's Firestore documents as authoritative. `watchSet(id)` and `watchSets()` provide live updates. A project-specific browser cache is used only when a cloud read genuinely fails; cloud and packaged data are never merged. Authorised saves write Firestore first, then refresh that cache. Stable set and item IDs are not regenerated, so existing Teacher Voice documents remain linked.
+
+## Topics
+
+Every vocabulary set belongs to exactly one topic through `topicId`. The website's Topics page (themandarinroom.au/#/topics) reads it from the published sets on each page load, so publishing, moving, renaming, re-levelling, deleting or republishing a set shows up after a normal refresh. No website change, mapping file or redeployment is involved.
+
+- **Canonical taxonomy:** `js/topic-taxonomy.js` holds the 11 approved topics: `numbers`, `colours`, `people`, `animals`, `greetings`, `food-drinks`, `school`, `free-time`, `countries`, `time-weather` and `culture`. `firestore.rules` (`validTopicId`) and the website's `dist/catalog.mjs` keep checked copies of the same list.
+- **Editor:** the **Topic \*** field sits beside Year level and stores the topic ID, never the label. Saving is refused until a valid topic is chosen. A set without one shows "Unassigned".
+- **Rules:**
+  - Only authorised teachers can write `topicId`, and it must be one of the 11 IDs.
+  - An edit may change a set's topic but can never drop it. This stops an old, cached editor from erasing it.
+- **Topic illustrations:** these belong to the website and never change when sets are added. Each set's own cover is still used on its card.
+- **Changing the taxonomy:** adding, renaming or removing a topic is a separate, approved change to all three lists. Never create a topic automatically, and never infer one from a set's title.
+- **Creating sets:** for manual, AI-assisted, script or import creation, follow [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md).
+- **Migration:** existing sets get their topic from `scripts/migrations/assign-topic-ids.mjs`, using the frozen, owner-approved `topic-assignments.json`.
+  - It is a dry run by default. `--apply` writes, and Production also needs `--confirm-production`.
+  - It writes a JSON backup first and writes only `topicId`, with an update-time precondition.
+  - It reads every set back afterwards and compares it with the backup, and is safe to rerun.
+  - `--rollback <backup>` undoes it.
+
+Tests:
+
+- `node --test tests/*.test.mjs`
+- Rules and migration, against the local emulator:
+
+  ```bash
+  firebase emulators:exec --only firestore --project demo-topics "node --test tests/topic-rules.emulator.mjs"
+  ```
 
 ## Vocabulary images (local upload, URL or generated)
 
@@ -43,7 +71,7 @@ Code: `js/vocabulary-image-processing.js` (validate, resize, encode), `js/vocabu
 
 ## Add a vocabulary set
 
-Use **+ New Set** in the teacher library, or choose **Edit** on a card. Choose a permanent descriptive ID such as `year3-school-places`; do not rename published IDs. Items can be added individually or pasted as `Chinese | pinyin | English`. Chinese-only lines are also accepted for later editing. Items can be edited, deleted and reordered with the arrow controls.
+Use **+ New Set** in the teacher library, or choose **Edit** on a card. Choose the **Topic** (required). Choose a permanent descriptive ID such as `year3-school-places`; do not rename published IDs. Items can be added individually or pasted as `Chinese | pinyin | English`. Chinese-only lines are also accepted for later editing. Items can be edited, deleted and reordered with the arrow controls.
 
 The **Generate Pinyin & English** helper uses a deliberately small local dictionary for common seed vocabulary. It never calls a paid API, never overwrites a populated Pinyin or English field, and all results remain editable. When no suggestion exists, enter the fields manually.
 

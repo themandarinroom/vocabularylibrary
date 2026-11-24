@@ -1,5 +1,6 @@
 import { firebaseConfig } from "./firebase-config.js";
 import { getFirebaseServices } from "./firebase.js";
+import { isValidTopicId } from "./topic-taxonomy.js?v=topics-1";
 
 const COLLECTION = "vocabularySets";
 const CACHE_SCHEMA_VERSION = 3;
@@ -39,9 +40,16 @@ function publicSet(data) {
     coverImage: data.coverImage || null,
     coverImageStoragePath: data.coverImageStoragePath || null,
     coverImageGenerated: data.coverImageGenerated === true,
+    // Stable topic ID from js/topic-taxonomy.js. Legacy sets may not have one yet ("unassigned").
+    ...(isValidTopicId(data.topicId) ? { topicId: data.topicId } : {}),
     items
   });
 }
+
+// Exported for tests: the one place that decides which set fields are stored, cached and shown.
+export { publicSet as publicVocabularySet };
+
+export const TOPIC_REQUIRED_MESSAGE = "Choose a Topic before saving. Every vocabulary set needs one of the approved topics.";
 
 function cleanCachedSet(set) {
   const cleaned = publicSet(set);
@@ -138,6 +146,7 @@ export async function getSet(id) {
 }
 
 export async function saveSet(nextSet, originalId = null) {
+  if (!isValidTopicId(nextSet?.topicId)) throw new Error(TOPIC_REQUIRED_MESSAGE);
   const services = await getFirebaseServices();
   if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before saving.");
   const duplicate = (await getSets()).some((set) => set.id === nextSet.id && set.id !== originalId);

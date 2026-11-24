@@ -122,3 +122,7 @@ h1, h2, h3, p { margin-top: 0; } h1, h2, h3 { line-height: 1.1; }
 /* Student header height is reserved without changing card controls or layout. */
 .student-page .student-shell{min-height:calc(100svh - 84px)}
 @media(pointer:coarse){.student-page .student-shell{min-height:calc(100svh - 112px)}}
+/* Topic field (24 Nov 2026): Year level and Topic sit side by side before the titles. */
+.set-details-grid { grid-template-columns: minmax(110px, .45fr) minmax(170px, .8fr) minmax(180px, 1fr) minmax(180px, 1fr); }.set-details-grid .topic-unassigned { color: #9c352d; font-weight: 650; }
+@media (max-width: 900px) { .set-details-grid { grid-template-columns: minmax(110px, .6fr) minmax(170px, 1fr); } }
+@media (max-width: 600px) { .set-details-grid { grid-template-columns: 1fr; } }
