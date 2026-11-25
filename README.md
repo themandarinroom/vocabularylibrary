@@ -35,10 +35,10 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
 
 Every vocabulary set belongs to exactly one topic through `topicId`. The website's Topics page (themandarinroom.au/#/topics) reads it from the published sets on each page load, so publishing, moving, renaming, re-levelling, deleting or republishing a set shows up after a normal refresh. No website change, mapping file or redeployment is involved.
 
-- **Canonical taxonomy:** `js/topic-taxonomy.js` holds the 11 approved topics: `numbers`, `colours`, `people`, `animals`, `greetings`, `food-drinks`, `school`, `free-time`, `countries`, `time-weather` and `culture`. `firestore.rules` (`validTopicId`) and the website's `dist/catalog.mjs` keep checked copies of the same list.
+- **Canonical taxonomy:** `js/topic-taxonomy.js` holds the 13 approved topics (v1.1): `numbers`, `colours`, `people`, `animals`, `social-interactions`, `food-drinks`, `school`, `free-time`, `countries`, `time-weather`, `culture`, `nature` and `community`. Greetings was replaced by Social Interactions on 25 November 2026. `firestore.rules` (`validTopicId`) and the website's `dist/catalog.mjs` keep checked copies of the same list.
 - **Editor:** the **Topic \*** field sits beside Year level and stores the topic ID, never the label. Saving is refused until a valid topic is chosen. A set without one shows "Unassigned".
 - **Rules:**
-  - Only authorised teachers can write `topicId`, and it must be one of the 11 IDs.
+  - Only authorised teachers can write `topicId`, and it must be one of the 13 IDs.
   - An edit may change a set's topic but can never drop it. This stops an old, cached editor from erasing it.
 - **Topic illustrations:** these belong to the website and never change when sets are added. Each set's own cover is still used on its card.
 - **Changing the taxonomy:** adding, renaming or removing a topic is a separate, approved change to all three lists. Never create a topic automatically, and never infer one from a set's title.

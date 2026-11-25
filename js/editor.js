@@ -1,5 +1,5 @@
-import { getSet, getSetsStrict, saveSet, deleteSet, TOPIC_REQUIRED_MESSAGE } from "./vocabulary-store.js?v=topics-1";
-import { TOPIC_TAXONOMY, isValidTopicId } from "./topic-taxonomy.js?v=topics-1";
+import { getSet, getSetsStrict, saveSet, deleteSet, TOPIC_REQUIRED_MESSAGE } from "./vocabulary-store.js?v=topics-2";
+import { TOPIC_TAXONOMY, isValidTopicId } from "./topic-taxonomy.js?v=topics-2";
 import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=duplicate-sets-1";
 import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=image-upload-1";
 import { imageFieldMarkup, setImageFieldStatus, wireImageField } from "./vocabulary-image-field.js?v=image-upload-1";

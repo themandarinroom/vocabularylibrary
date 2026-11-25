@@ -4,31 +4,37 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { TOPIC_TAXONOMY, TOPIC_IDS, LEGACY_TOPIC_IDS, isValidTopicId, resolveTopic } from "../js/topic-taxonomy.js";
 import { publicVocabularySet, saveSet, TOPIC_REQUIRED_MESSAGE } from "../js/vocabulary-store.js";
-import { planMigration, verifyMigration, planRollback } from "../scripts/migrations/topic-migration-core.mjs";
+import { planMigration, verifyMigration, planRollback, planRetiredRename, planRetiredRenameRollback } from "../scripts/migrations/topic-migration-core.mjs";
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("the taxonomy is exactly the 11 approved topics, in order, with stable IDs and labels", () => {
+test("the taxonomy is exactly the 13 approved topics (v1.1), in order, with stable IDs and labels", () => {
   assert.deepEqual(TOPIC_TAXONOMY.map((t) => [t.id, t.titleEn, t.titleZh]), [
     ["numbers", "Numbers", "数字"], ["colours", "Colours", "颜色"], ["people", "People", "人物"], ["animals", "Animals", "动物"],
-    ["greetings", "Greetings", "问候"], ["food-drinks", "Food & Drinks", "食物与饮料"], ["school", "School", "学校"],
-    ["free-time", "Free Time", "休闲活动"], ["countries", "Countries", "国家"], ["time-weather", "Time & Weather", "时间与天气"], ["culture", "Culture", "文化"]
+    ["social-interactions", "Social Interactions", "社交"], ["food-drinks", "Food & Drinks", "餐饮"], ["school", "School", "学校"],
+    ["free-time", "Free Time", "休闲活动"], ["countries", "Countries", "国家"], ["time-weather", "Time & Weather", "时间与天气"], ["culture", "Culture", "文化"],
+    ["nature", "Nature", "自然"], ["community", "Community", "社区"]
   ]);
-  assert.deepEqual(TOPIC_TAXONOMY.map((t) => t.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-  assert.equal(new Set(TOPIC_IDS).size, 11);
+  assert.deepEqual(TOPIC_TAXONOMY.map((t) => t.order), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+  assert.equal(new Set(TOPIC_IDS).size, 13);
   assert(Object.isFrozen(TOPIC_TAXONOMY) && TOPIC_TAXONOMY.every(Object.isFrozen));
-  for (const removed of ["family", "body-parts", "food", "weather", "time", "sports", "australia", "calendar", "self-introduction"]) assert.equal(isValidTopicId(removed), false, removed);
+  for (const removed of ["greetings", "family", "body-parts", "food", "weather", "time", "sports", "australia", "calendar", "self-introduction"]) assert.equal(isValidTopicId(removed), false, removed);
 });
 
 test("legacy IDs map only to approved topics and are never valid topicIds themselves", () => {
-  assert.deepEqual(LEGACY_TOPIC_IDS, { family: "people", "body-parts": "people", food: "food-drinks", weather: "time-weather", time: "time-weather" });
+  assert.deepEqual(LEGACY_TOPIC_IDS, { family: "people", "body-parts": "people", food: "food-drinks", weather: "time-weather", time: "time-weather", greetings: "social-interactions" });
   for (const [legacy, next] of Object.entries(LEGACY_TOPIC_IDS)) { assert(isValidTopicId(next)); assert(!isValidTopicId(legacy)); }
 });
 
 test("resolveTopic accepts an ID or an exact English/Chinese label and never invents a topic", () => {
   assert.equal(resolveTopic("Free Time").id, "free-time");
   assert.equal(resolveTopic("time & weather").id, "time-weather");
-  assert.equal(resolveTopic("食物与饮料").id, "food-drinks");
+  assert.equal(resolveTopic("餐饮").id, "food-drinks");
+  assert.equal(resolveTopic("食物与饮料"), null, "retired label");
+  assert.equal(resolveTopic("Social Interactions").id, "social-interactions");
+  assert.equal(resolveTopic("社区").id, "community");
+  assert.equal(resolveTopic("Nature").id, "nature");
+  assert.equal(resolveTopic("Greetings"), null, "Greetings is no longer a topic");
   assert.equal(resolveTopic("free-time").id, "free-time");
   for (const unknown of ["Hobbies", "Sports", "Weather", "", null, 7]) assert.equal(resolveTopic(unknown), null, String(unknown));
 });
@@ -60,7 +66,7 @@ test("the editor offers the taxonomy beside Year level, stores the ID and requir
   assert.match(js, /showTopic\(duplicateSource\.topicId\)/);
   assert.equal((js.match(/requireTopic\(/g) || []).length, 4, "definition + set save + cover accept + approved images");
   assert.doesNotMatch(js, /topicId: "(numbers|colours|people|animals)"/, "no silent default topic");
-  assert.match(html, /js\/editor\.js\?v=topics-1/);
+  assert.match(html, /js\/editor\.js\?v=topics-2/);
 });
 
 test("the editor does not touch audio playback", () => {
@@ -109,4 +115,15 @@ test("rollback removes only the topicIds the migration added", () => {
   const backup = [doc("year1-pets", {}), doc("year3-age", {}), doc("year2-family", { topicId: { stringValue: "people" } })];
   const current = [doc("year1-pets", { topicId: { stringValue: "animals" } }), doc("year3-age", { topicId: { stringValue: "school" } }), doc("year2-family", { topicId: { stringValue: "people" } })];
   assert.deepEqual(planRollback(backup, current, assignments).map((s) => [s.id, s.action]), [["year1-pets", "remove"], ["year3-age", "keep-changed"]]);
+});
+
+test("v1.1 rename: only sets on a retired ID move, to its replacement; others are untouched", () => {
+  const docs = [doc("year2-greetings", { topicId: { stringValue: "greetings" } }), doc("year1-pets", { topicId: { stringValue: "animals" } }), doc("year1-legacy", {}), doc("year2-gone", { deleted: { booleanValue: true }, topicId: { stringValue: "greetings" } })];
+  const plan = planRetiredRename(docs, LEGACY_TOPIC_IDS);
+  assert.deepEqual(plan.actions.map((a) => [a.id, a.action, a.target ?? null]), [["year2-greetings", "assign", "social-interactions"], ["year1-pets", "keep", null], ["year1-legacy", "keep", null], ["year2-gone", "tombstone", null]]);
+  const after = [doc("year2-greetings", { topicId: { stringValue: "social-interactions" } }), docs[1], docs[2], docs[3]];
+  assert.deepEqual(verifyMigration(docs, after, plan), []);
+  const changed = [doc("year2-greetings", { topicId: { stringValue: "school" } }), docs[1], docs[2], docs[3]];
+  assert.deepEqual(planRetiredRenameRollback(docs, after, LEGACY_TOPIC_IDS).map((s) => [s.id, s.action, s.value]), [["year2-greetings", "restore", "greetings"]]);
+  assert.deepEqual(planRetiredRenameRollback(docs, changed, LEGACY_TOPIC_IDS).map((s) => [s.id, s.action]), [["year2-greetings", "keep-changed"]]);
 });

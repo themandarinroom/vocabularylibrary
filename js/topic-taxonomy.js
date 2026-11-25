@@ -1,4 +1,4 @@
-// Canonical topic taxonomy for The Mandarin Room (approved 24 November 2026).
+// Canonical topic taxonomy for The Mandarin Room (v1.1, approved 25 November 2026: 13 topics).
 //
 // This module is the single source of truth for topic IDs, labels and order.
 // Two enforced copies exist because they cannot import this file:
@@ -13,25 +13,28 @@ export const TOPIC_TAXONOMY = Object.freeze([
   ["colours", "Colours", "颜色", "Recognising and using colours."],
   ["people", "People", "人物", "Family, body parts and personal information."],
   ["animals", "Animals", "动物", "Pets, wild animals and animal vocabulary."],
-  ["greetings", "Greetings", "问候", "Greetings, responses and everyday expressions."],
-  ["food-drinks", "Food & Drinks", "食物与饮料", "Fruit, food, drinks and food preferences."],
+  ["social-interactions", "Social Interactions", "社交", "Greetings, polite expressions and everyday social interactions."],
+  ["food-drinks", "Food & Drinks", "餐饮", "Fruit, food, drinks and food preferences."],
   ["school", "School", "学校", "School places and everyday school life."],
   ["free-time", "Free Time", "休闲活动", "Sports, hobbies and leisure activities."],
   ["countries", "Countries", "国家", "Countries, nationalities and geographical places."],
   ["time-weather", "Time & Weather", "时间与天气", "Time, dates, seasons and weather."],
-  ["culture", "Culture", "文化", "Festivals, traditions and cultural vocabulary."]
+  ["culture", "Culture", "文化", "Festivals, traditions and cultural vocabulary."],
+  ["nature", "Nature", "自然", "Plants, natural landscapes and the environment."],
+  ["community", "Community", "社区", "Community places, occupations, transport and everyday life."]
 ].map(([id, titleEn, titleZh, description], index) => Object.freeze({ id, titleEn, titleZh, description, order: index + 1 })));
 
 export const TOPIC_IDS = Object.freeze(TOPIC_TAXONOMY.map((topic) => topic.id));
 
-// Topic IDs used before 24 November 2026 (12-topic structure) and their replacements.
-// Only for reading old links and old Unit metadata; never written to a vocabulary set.
+// Retired topic IDs and their replacements: the 12-topic structure used before 24 November 2026, and
+// Greetings (24–25 November 2026). Only for reading old links and metadata; never written to a vocabulary set.
 export const LEGACY_TOPIC_IDS = Object.freeze({
   family: "people",
   "body-parts": "people",
   food: "food-drinks",
   weather: "time-weather",
-  time: "time-weather"
+  time: "time-weather",
+  greetings: "social-interactions"
 });
 
 export function isValidTopicId(value) {

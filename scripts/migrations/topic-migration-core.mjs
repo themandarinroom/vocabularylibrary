@@ -71,3 +71,34 @@ export function planRollback(backupDocs, currentDocs, assignments) {
     return [{ id, action: "remove", name: doc.name, updateTime: doc.updateTime }];
   });
 }
+
+// v1.1: sets whose topicId is a retired ID (e.g. greetings) move to its replacement (social-interactions).
+// Every other set is untouched. The result has the same shape as planMigration, so verifyMigration applies.
+export function planRetiredRename(docs, legacyMap) {
+  const actions = docs.map((doc) => {
+    const id = docId(doc);
+    const current = str(doc.fields?.topicId);
+    if (isTombstone(doc)) return { id, action: "tombstone", current };
+    const target = legacyMap[current];
+    if (current !== undefined && target) {
+      if (!isValidTopicId(target)) throw new Error(`Legacy map points ${current} at invalid ${target}`);
+      return { id, action: "assign", current, target, updateTime: doc.updateTime, name: doc.name };
+    }
+    return { id, action: "keep", current };
+  });
+  return { actions, missing: [] };
+}
+
+// Undo planRetiredRename: put the retired ID back only where the set still carries the replacement it was given.
+export function planRetiredRenameRollback(backupDocs, currentDocs, legacyMap) {
+  const backup = new Map(backupDocs.map((doc) => [docId(doc), doc]));
+  return currentDocs.flatMap((doc) => {
+    const id = docId(doc);
+    const before = backup.get(id);
+    const was = str(before?.fields?.topicId);
+    const now = str(doc.fields?.topicId);
+    if (!before || isTombstone(before) || !was || !legacyMap[was]) return []; // the rename never touches tombstones
+    if (now !== legacyMap[was]) return [{ id, action: "keep-changed", current: now }];
+    return [{ id, action: "restore", value: was, name: doc.name, updateTime: doc.updateTime }];
+  });
+}

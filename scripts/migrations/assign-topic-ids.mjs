@@ -4,6 +4,8 @@
 //   node scripts/migrations/assign-topic-ids.mjs --project <id> [--emulator 127.0.0.1:8080]
 //        [--apply] [--confirm-production] [--backup-dir <dir>]
 //   node scripts/migrations/assign-topic-ids.mjs --project <id> --rollback <backup.json> [--apply] ...
+//   Add --rename-retired to move sets off retired topic IDs instead (v1.1: greetings -> social-interactions),
+//   with --rollback restoring the retired ID where the set still carries its replacement.
 //
 // Safety:
 //   - Dry run unless --apply. The Production project also needs --confirm-production.
@@ -17,7 +19,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { planMigration, verifyMigration, planRollback, docId } from "./topic-migration-core.mjs";
+import { planMigration, verifyMigration, planRollback, planRetiredRename, planRetiredRenameRollback, docId } from "./topic-migration-core.mjs";
+import { LEGACY_TOPIC_IDS } from "../../js/topic-taxonomy.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PRODUCTION = "the-mandarin-room";
@@ -29,6 +32,7 @@ const project = option("--project");
 const emulator = option("--emulator");
 const apply = flag("--apply");
 const rollbackFile = option("--rollback");
+const renameRetired = flag("--rename-retired");
 const backupDir = path.resolve(option("--backup-dir") || path.join(here, "backups"));
 if (!project || !/^[a-z0-9-]+$/.test(project)) throw new Error("Pass --project <firebase-project-id>.");
 if (emulator && !/^(127\.0\.0\.1|localhost):\d+$/.test(emulator)) throw new Error("--emulator must be 127.0.0.1:<port> or localhost:<port>.");
@@ -82,21 +86,21 @@ console.log(`Backup of ${before.length} documents: ${backupPath}`);
 if (rollbackFile) {
   const backup = JSON.parse(fs.readFileSync(path.resolve(rollbackFile), "utf8"));
   if (backup.project !== project) throw new Error(`Backup is for ${backup.project}, not ${project}.`);
-  const steps = planRollback(backup.documents, before, assignments);
-  console.table(steps.map(({ id, action, current }) => ({ id, action, current })));
-  if (!apply) { console.log("Dry run: nothing written. Add --apply to remove these topicIds."); process.exit(0); }
-  for (const step of steps.filter((entry) => entry.action === "remove")) {
-    await writeTopic(step, null);
-    console.log(`removed topicId: ${step.id}`);
+  const steps = renameRetired ? planRetiredRenameRollback(backup.documents, before, LEGACY_TOPIC_IDS) : planRollback(backup.documents, before, assignments);
+  console.table(steps.map(({ id, action, current, value }) => ({ id, action, current: current ?? "", restore: value ?? "" })));
+  if (!apply) { console.log("Dry run: nothing written. Add --apply to undo."); process.exit(0); }
+  for (const step of steps.filter((entry) => entry.action === "remove" || entry.action === "restore")) {
+    await writeTopic(step, step.action === "restore" ? step.value : null);
+    console.log(`${step.action === "restore" ? `restored ${step.value}` : "removed topicId"}: ${step.id}`);
   }
   const after = await listAll();
-  const left = after.filter((doc) => steps.some((step) => step.action === "remove" && step.id === docId(doc)) && doc.fields?.topicId);
+  const left = after.filter((doc) => steps.some((step) => step.id === docId(doc) && ((step.action === "remove" && doc.fields?.topicId) || (step.action === "restore" && doc.fields?.topicId?.stringValue !== step.value))));
   if (left.length) throw new Error(`Rollback incomplete: ${left.map(docId).join(", ")}`);
   console.log("Rollback complete.");
   process.exit(0);
 }
 
-const plan = planMigration(before, assignments);
+const plan = renameRetired ? planRetiredRename(before, LEGACY_TOPIC_IDS) : planMigration(before, assignments);
 console.table(plan.actions.map(({ id, action, current, target }) => ({ id, action, current: current ?? "", target: target ?? "" })));
 if (plan.missing.length) console.log(`Approved IDs not found (nothing done): ${plan.missing.join(", ")}`);
 const toAssign = plan.actions.filter((entry) => entry.action === "assign");

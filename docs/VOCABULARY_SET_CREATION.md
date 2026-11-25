@@ -22,7 +22,33 @@ Topic: Time & Weather
 Topic ID: time-weather
 ```
 
-## 2. Approved topics
+```yaml
+English Title: Greetings I
+Chinese Title: 问候 I
+Year Level: Year 2
+Topic: Social Interactions
+Topic ID: social-interactions
+```
+
+```yaml
+English Title: Plants I
+Chinese Title: 植物 I
+Year Level: Year 4
+Topic: Nature
+Topic ID: nature
+```
+
+```yaml
+English Title: Places in the Community
+Chinese Title: 社区场所
+Year Level: Year 5
+Topic: Community
+Topic ID: community
+```
+
+These are format examples only; they are not sets to create.
+
+## 2. Approved topics (v1.1, 13 topics)
 
 The source of truth is `js/topic-taxonomy.js`.
 
@@ -32,13 +58,17 @@ The source of truth is `js/topic-taxonomy.js`.
 | Colours | 颜色 | `colours` | Colours |
 | People | 人物 | `people` | Family, body parts, age, self-introduction, personal information, appearance |
 | Animals | 动物 | `animals` | Pets, wild animals, animal vocabulary |
-| Greetings | 问候 | `greetings` | Greetings, responses, everyday expressions |
-| Food & Drinks | 食物与饮料 | `food-drinks` | Fruit, food, drinks, food preferences |
+| Social Interactions | 社交 | `social-interactions` | Greetings and farewells, asking how someone is, thanking and apologising, polite expressions, invitations, everyday conversational exchanges |
+| Food & Drinks | 餐饮 | `food-drinks` | Fruit, food, drinks, food preferences |
 | School | 学校 | `school` | School places and everyday school life |
 | Free Time | 休闲活动 | `free-time` | Sports, hobbies, leisure, music, recreation |
 | Countries | 国家 | `countries` | Countries, nationalities, capital cities, Australian states and geography |
 | Time & Weather | 时间与天气 | `time-weather` | Time, dates, days, months, seasons, weather |
 | Culture | 文化 | `culture` | Festivals, traditions, cultural vocabulary |
+| Nature | 自然 | `nature` | Plants, trees, flowers; mountains, rivers, oceans; landscapes; environments; environmental protection and sustainability. Animals stay under Animals; weather and seasons under Time & Weather |
+| Community | 社区 | `community` | Community places and public facilities, occupations, transport, shopping, directions and locations, everyday community life. School vocabulary stays under School; social expressions under Social Interactions |
+
+**Greetings is not a topic.** Greetings vocabulary belongs to Social Interactions (`social-interactions`). The old ID `greetings` is refused.
 
 ## 3. Rules for AI-assisted, scripted and batch creation
 

@@ -1,6 +1,6 @@
 import { firebaseConfig } from "./firebase-config.js";
 import { getFirebaseServices } from "./firebase.js";
-import { isValidTopicId } from "./topic-taxonomy.js?v=topics-1";
+import { isValidTopicId } from "./topic-taxonomy.js?v=topics-2";
 
 const COLLECTION = "vocabularySets";
 const CACHE_SCHEMA_VERSION = 3;

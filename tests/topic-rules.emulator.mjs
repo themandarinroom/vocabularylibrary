@@ -38,7 +38,7 @@ test.before(async () => {
 test("an authorised teacher can create a set with a valid topic, but not with an unknown one", async () => {
   assert.equal((await write("teacher-1", "zz-valid", set("zz-valid", { topicId: "free-time" }))).status, 200);
   assert.equal(await topicOf("zz-valid"), "free-time");
-  for (const topicId of ["sports", "Free Time", "", 5]) assert.equal((await write("teacher-1", "zz-invalid", set("zz-invalid", { topicId }))).status, 403, String(topicId));
+  for (const topicId of ["sports", "greetings", "Free Time", "", 5]) assert.equal((await write("teacher-1", "zz-invalid", set("zz-invalid", { topicId }))).status, 403, String(topicId));
 });
 
 test("a teacher can reassign a topic; an edit that drops an existing topic is refused", async () => {
@@ -61,10 +61,10 @@ test("anonymous users and signed-in non-teachers cannot change topic metadata", 
 });
 
 test("published topicIds are readable by the anonymous public query the website uses", async () => {
-  await write("teacher-1", "zz-public", set("zz-public", { topicId: "greetings" }));
+  await write("teacher-1", "zz-public", set("zz-public", { topicId: "social-interactions" }));
   const rows = (await call(`${docs}:runQuery`, { method: "POST", body: { structuredQuery: { from: [{ collectionId: "vocabularySets" }], where: { fieldFilter: { field: { fieldPath: "published" }, op: "EQUAL", value: { booleanValue: true } } } } } })).json;
   const found = rows.find((r) => r.document?.name.endsWith("/zz-public"));
-  assert.equal(found.document.fields.topicId.stringValue, "greetings");
+  assert.equal(found.document.fields.topicId.stringValue, "social-interactions");
 });
 
 test("migration script: dry run writes nothing, apply assigns, rerun is a no-op, rollback restores", async () => {
@@ -109,4 +109,33 @@ test("the migration's write is refused when a set changed after it was read (upd
   assert.equal(stale.status, 400);
   assert.match(JSON.stringify(stale.json), /FAILED_PRECONDITION/);
   assert.equal(await topicOf("zz-race"), undefined);
+});
+
+test("v1.1: the three new topic IDs are accepted by the rules", async () => {
+  await call(`${docs}/authorizedTeachers/teacher-1`, { method: "PATCH", auth: "owner", body: { fields: { active: { booleanValue: true } } } }); // an earlier test clears the emulator
+  for (const topicId of ["social-interactions", "nature", "community"]) {
+    assert.equal((await write("teacher-1", `zz-${topicId}`, set(`zz-${topicId}`, { topicId }))).status, 200, topicId);
+    assert.equal(await topicOf(`zz-${topicId}`), topicId);
+  }
+});
+
+test("v1.1 rename-retired: greetings moves to social-interactions, rerun is a no-op, rollback restores", async () => {
+  await call(`http://${host}/emulator/v1/projects/${project}/databases/(default)/documents`, { method: "DELETE" });
+  await admin("year2-greetings-test", { ...set("year2-greetings-test", { topicId: "greetings", title: "Greetings test" }), published: true });
+  await admin("year1-pets", { ...set("year1-pets", { topicId: "animals" }), published: true });
+  const backups = mkdtempSync(path.join(tmpdir(), "topic-rename-"));
+  const run = (...extra) => execFileSync(process.execPath, ["scripts/migrations/assign-topic-ids.mjs", "--project", project, "--emulator", host, "--backup-dir", backups, "--rename-retired", ...extra], { cwd: repo, encoding: "utf8" });
+  const before = (await call(`${docs}/vocabularySets/year2-greetings-test`, { auth: "owner" })).json;
+  assert.match(run(), /Dry run: 1 set\(s\) would be assigned/);
+  assert.equal(await topicOf("year2-greetings-test"), "greetings");
+  assert.match(run("--apply"), /Readback passed: 1 assigned/);
+  assert.equal(await topicOf("year2-greetings-test"), "social-interactions");
+  assert.equal(await topicOf("year1-pets"), "animals");
+  const after = (await call(`${docs}/vocabularySets/year2-greetings-test`, { auth: "owner" })).json;
+  const { topicId: a, ...restAfter } = after.fields; const { topicId: b, ...restBefore } = before.fields;
+  assert.deepEqual(restAfter, restBefore, "only topicId changed");
+  assert.match(run("--apply"), /Readback passed: 0 assigned/);
+  const first = readdirSync(backups).filter((f) => !f.endsWith(".after.json")).sort()[0];
+  assert.match(run("--rollback", path.join(backups, first), "--apply"), /Rollback complete/);
+  assert.equal(await topicOf("year2-greetings-test"), "greetings");
 });
