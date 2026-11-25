@@ -103,5 +103,14 @@ test('student Unit publication — emulator-only synthetic records',async t=>{
   }
   const plain=input({expectedRevision:1});plain.student.lessons=[selection('lesson-a')];assert.equal((await publish(plain)).revision,2,'unlinked lessons do not depend on availability');
  });
+ await t.test('Topics v1.1: the 13 canonical IDs are accepted; retired IDs are stored as their replacement; unknown IDs are refused',async()=>{
+  let revision=0;const send=async topics=>{const data=input({expectedRevision:revision});data.student.topics=topics;revision=(await publish(data)).revision;return (await get('publicUnits/'+source.id)).topics;};
+  assert.deepEqual(await send(['social-interactions','nature','community']),['social-interactions','nature','community']);
+  assert.deepEqual(await send(['numbers','colours','people','animals','social-interactions','food-drinks','school','free-time','countries','time-weather','culture','nature','community']).then(t=>t.length),13);
+  assert.deepEqual(await send(['greetings']),['social-interactions'],'Greetings is stored as Social Interactions');
+  assert.deepEqual(await send(['family','body-parts','food']),['people','food-drinks'],'retired IDs are converted and merged');
+  assert.deepEqual(await send(['weather','time-weather']),['time-weather']);
+  for(const topics of [['sports'],['australia'],['Greetings'],['nature','unknown']]){const data=input({expectedRevision:revision});data.student.topics=topics;await rejects(publish(data),'invalid-argument');}
+ });
  await t.test('publication backend refuses unknown projects',()=>{for(const projectId of ['the-mandarin-room-prod','','other-staging'])assert.throws(()=>createPublicUnitHandlers({db,projectId}),/staging or production/);});
 });

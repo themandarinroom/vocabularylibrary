@@ -3,7 +3,11 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const TOPICS = new Set(['numbers','family','food','animals','weather','countries','school','colours','body-parts','time','people','culture']);
+// Canonical topic IDs (Topics v1.1, 25 Nov 2026) = TOPIC_IDS in vocabularylibrary js/topic-taxonomy.js.
+const TOPICS = new Set(['numbers','colours','people','animals','social-interactions','food-drinks','school','free-time','countries','time-weather','culture','nature','community']);
+// Retired IDs still sent by older publication pages are stored as their replacement, never as themselves.
+const LEGACY_TOPICS = Object.freeze({ family: 'people', 'body-parts': 'people', food: 'food-drinks', weather: 'time-weather', time: 'time-weather', greetings: 'social-interactions' });
+const canonicalTopics = list => [...new Set(list.map(topic => LEGACY_TOPICS[topic] || topic))];
 const fail = (code, message) => { throw new HttpsError(code, message); };
 function keys(value, allowed) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== allowed.length || !allowed.every(key => Object.hasOwn(value, key))) fail('invalid-argument', 'Unexpected or missing publication fields.');
@@ -33,7 +37,7 @@ function sourceVersion(unit) {
 }
 function projection(unit, input) {
   keys(input, ['description', 'topics', 'lessons']);
-  const topics = uniqueList(input.topics, 12);
+  const topics = canonicalTopics(uniqueList(input.topics, 13));
   if (!topics.length || topics.some(topic => !TOPICS.has(topic))) fail('invalid-argument', 'Select at least one reviewed topic.');
   if (!Number.isInteger(unit.yearLevel) || unit.yearLevel < 0 || unit.yearLevel > 6) fail('failed-precondition', 'Invalid source recommended year.');
   if (!Array.isArray(input.lessons) || !input.lessons.length || input.lessons.length > 30 || !Array.isArray(unit.lessons)) fail('invalid-argument', 'Approve 1–30 lessons.');
