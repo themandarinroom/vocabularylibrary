@@ -43,7 +43,8 @@ Every vocabulary set belongs to one or more topics through `topicIds` (stable ID
   - An edit may change a set's topics but can never drop them, and once a set has `topicIds` every edit must carry them. This stops an old, cached editor (which only knows `topicId`) from erasing extra topics.
 - **Topic illustrations:** these belong to the website and never change when sets are added. Each set's own cover is still used on its card.
 - **Changing the taxonomy:** adding, renaming or removing a topic is a separate, approved change to all three lists. Never create a topic automatically, and never infer one from a set's title.
-- **Creating sets:** for manual, AI-assisted, script or import creation, follow [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md).
+- **Creating sets:** for manual, AI-assisted, script or import creation, follow [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md). Imports use `scripts/vocabulary-import/` (`topicFieldsFor`, `check-set.mjs`).
+- **Release record, schema and legacy `topicId` plan:** [docs/TOPICS.md](docs/TOPICS.md). Topics v1.1 (13 topics, multi-topic sets) has been live since 25 Nov 2026.
 - **Migration:** existing sets get their topic from `scripts/migrations/assign-topic-ids.mjs`, using the frozen, owner-approved `topic-assignments.json`.
   - It is a dry run by default. `--apply` writes, and Production also needs `--confirm-production`.
   - It writes a JSON backup first and writes only `topicId`, with an update-time precondition.

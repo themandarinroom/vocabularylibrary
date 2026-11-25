@@ -14,6 +14,16 @@ Topic: Free Time
 Topic ID: free-time
 ```
 
+A set may belong to several topics. List each one:
+
+```yaml
+English Title: Age
+Chinese Title: 年龄
+Year Level: Year 3
+Topics: Numbers, People
+Topic IDs: numbers, people
+```
+
 ```yaml
 English Title: Days of the Week
 Chinese Title: 星期
@@ -74,7 +84,8 @@ The source of truth is `js/topic-taxonomy.js`.
 
 1. **Validate the topic before writing anything.** Use `resolveTopic()` or `isValidTopicId()` from `js/topic-taxonomy.js`. If the Topic and Topic ID disagree, the topic is missing, or the topic is not in the table, **stop and ask the owner**. Never guess, never fall back to a default, and never create a new topic.
 2. **Write the stable topic IDs** into the set document as `topicIds` (one or more, for example `["free-time"]` or `["numbers", "people"]`), plus `topicId` equal to the first. Never write display labels. The editor and `saveSet()` refuse a set without at least one valid topic, and Firestore rules reject unknown or duplicate IDs.
-3. **Scripts and imports** that write documents directly must include `topicId` in the full document.
+3. **Scripts and imports** that write documents directly must build the topic fields with `topicFieldsFor()` from `scripts/vocabulary-import/topic-fields.mjs`. This writes `topicIds` (all topics) and `topicId` (the first). They must also run `node scripts/vocabulary-import/check-set.mjs set.json --project <project>` before writing, which refuses unknown, retired or duplicate topics and an ID that already exists.
+   - Never hand-write topic fields. The import scripts kept in `The Mandarin Room/imports/` from before 26 Nov write only `topicId` and must not be copied unchanged.
    - The rules apply to client writes only.
    - Admin and REST imports bypass the rules, so the script itself must validate the topic.
    - When updating an existing set, never drop its `topicId` or `topicIds`.
