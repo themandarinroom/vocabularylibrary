@@ -258,3 +258,22 @@ body.playing .game-screen{height:calc(100dvh - 68px)}
   .game-bar{display:grid;grid-template-columns:1fr;gap:6px}
   .game-controls{justify-content:flex-start}
 }
+
+/* ================= Completion experience (Phase C2) ================= */
+.complete-panel{position:fixed;inset:0;z-index:60;background:#17302a66;display:grid;place-items:center;padding:16px calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.cp-card{background:#fffdf8;border-radius:24px;box-shadow:0 24px 60px #1b504340;max-width:min(980px,100%);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;padding:20px 24px}
+.cp-head{text-align:center}.cp-head h2{margin:4px 0 4px;font-size:30px;outline:none}.cp-head h2 span{color:var(--red)}
+.cp-head p{margin:0 0 10px;color:var(--muted);font-size:16px}
+.cp-stars{width:120px;height:36px}
+@media (prefers-reduced-motion:no-preference){.cp-stars g path{transform-origin:center;transform-box:fill-box;animation:cp-pop .6s ease-out both}.cp-stars g path:nth-child(2){animation-delay:.12s}.cp-stars g path:nth-child(3){animation-delay:.24s}}
+@keyframes cp-pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.cp-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:20px;align-items:start}
+.cp-field{display:block;font-weight:700;margin:8px 0}.cp-field input{display:block;width:100%;margin-top:4px;min-height:48px;font-size:18px;padding:8px 12px;border:1px solid #9bb6a9;border-radius:12px;background:#fff}
+.cp-form .primary-button{margin-top:10px}
+.cp-status{min-height:1.4em;margin:8px 0;font-size:15px}.cp-status[data-kind=error]{color:#9a3412;font-weight:650}.cp-status[data-kind=ok]{color:#1f7a45;font-weight:650}
+.cp-fallback{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0}
+.cp-fallback img{width:100%;height:auto;display:block;border:1px solid #e3e7de;border-radius:8px;-webkit-touch-callout:default;user-select:auto;-webkit-user-select:auto}
+.cp-more{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cp-preview{margin:0}.cp-preview img{width:100%;height:auto;display:block;border:1px solid #e3e7de;border-radius:10px;background:#fff;min-height:120px}
+@media (max-width:760px),(orientation:portrait){.cp-body{grid-template-columns:1fr}.cp-preview{order:-1}}
+.complete-note button{margin-left:10px;min-height:40px}

@@ -26,7 +26,7 @@ async function loadPictures(puzzle) {
   return info;
 }
 
-export async function openWorkspace({ puzzle, template, sets, onExit }) {
+export async function openWorkspace({ puzzle, template, sets, onExit, onComplete }) {
   const $ = id => document.getElementById(id);
   const ac = new AbortController(), on = { signal: ac.signal }; // every listener is removed when the puzzle closes
   const setTitles = sets.map(s => s.title);
@@ -147,10 +147,11 @@ export async function openWorkspace({ puzzle, template, sets, onExit }) {
       completed = true; selected = null; updateTapTools();
       document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
       $('complete-note').hidden = false;
-      $('complete-note').textContent = `All ${pr.total} word pairs are matched. Puzzle complete!`;
+      $('complete-note').innerHTML = `All ${pr.total} word pairs are matched. Puzzle complete! <button id="record-open" type="button" class="tool-button">Learning record</button>`;
       document.body.classList.add('puzzle-complete');
       // Phase C listens for this to build the Evidence of Learning (data only; nothing is sent anywhere).
       document.dispatchEvent(new CustomEvent('tarsia:complete', { detail: tarsiaCompletionRecord(puzzle, state, { vocabularySets: sets }) }));
+      onComplete?.({ puzzle, state, sets }); // completion experience (C2): opens the learning-record panel
     }
   }
 

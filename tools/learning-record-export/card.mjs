@@ -1,0 +1,68 @@
+// Evidence of Learning — shared A6 learning-record card (Phase C1 proof of concept). Draws the activity-independent
+// parts of a record (branding, details, learning intention, success criteria, statement) onto a 2D canvas context and
+// hands a content box to the activity's own renderer (e.g. the Tarsia board). White, print-friendly, no controls.
+import { EXPORT_FORMAT } from '../learning-record/record.mjs';
+
+export const CARD = Object.freeze({ width: EXPORT_FORMAT.width, height: EXPORT_FORMAT.height, margin: 64, textWidth: 600,
+  ink: '#0c193b', muted: '#5b6b80', accent: '#0d4b8f', ok: '#1f7a45', rule: '#d7dde6',
+  font: '"Avenir Next", Avenir, "Segoe UI", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif' });
+
+// Greedy word wrap with an injected measure; long words are never cut.
+export function wrapLines(text, maxWidth, measure) {
+  const lines = []; let line = '';
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && measure(next) > maxWidth) { lines.push(line); line = word; } else line = next;
+  }
+  return line ? [...lines, line] : lines;
+}
+
+const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} record  from buildCompletionRecord()
+ * @param {{ emblem?: CanvasImageSource, drawContent: (ctx, box) => void, puzzleLine?: string }} options
+ */
+export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine }) {
+  const { width: W, height: H, margin: M, textWidth: TW } = CARD;
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = CARD.rule; ctx.lineWidth = 4; ctx.strokeRect(22, 22, W - 44, H - 44);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  const font = (weight, px) => { ctx.font = `${weight} ${px}px ${CARD.font}`; };
+  const measureAt = (weight, px) => t => { font(weight, px); return ctx.measureText(t).width; };
+  let x = M, y = M + 40;
+  if (emblem) { ctx.drawImage(emblem, M, M - 6, 92, 88); x = M + 112; }
+  font(700, 56); ctx.fillStyle = CARD.ink; ctx.fillText(record.brand || 'The Mandarin Room', x, y + 10);
+  font(500, 32); ctx.fillStyle = CARD.muted; ctx.fillText(`${record.activity.category} · ${record.activity.name} · Learning record`, x, y + 56);
+  font(700, 38); ctx.fillStyle = CARD.ok; ctx.textAlign = 'right'; ctx.fillText('Completed ✓', W - M, y + 10); ctx.textAlign = 'left';
+  ctx.strokeStyle = CARD.rule; ctx.beginPath(); ctx.moveTo(M, M + 130); ctx.lineTo(W - M, M + 130); ctx.stroke();
+
+  // Details column.
+  y = M + 200;
+  const rows = [['Name', record.student?.firstName || '—'], ['Class', record.student?.className || '—'], ['Date', formatDate(record.completedAt)],
+    ['Vocabulary', record.vocabularySets.map(s => s.title).join(', ')], ['Puzzle', puzzleLine || record.difficulty?.label || ''],
+    ['Matching', record.matchingMode.label], ['Matches', `${record.matchesCompleted} of ${record.matchesCompleted} ✓`]];
+  for (const [label, value] of rows) {
+    font(500, 30); ctx.fillStyle = CARD.muted; ctx.fillText(label, M, y);
+    font(650, 31); ctx.fillStyle = CARD.ink;
+    for (const line of wrapLines(value, TW - 190, measureAt(650, 31))) { ctx.fillText(line, M + 190, y); y += 42; }
+    y += 10;
+  }
+  y += 18;
+  for (const [title, text] of [['Learning intention', record.learningIntention], ['Success criteria', record.successCriteria]]) {
+    font(750, 29); ctx.fillStyle = CARD.accent; ctx.fillText(title, M, y); y += 42;
+    font(500, 30); ctx.fillStyle = CARD.ink;
+    for (const line of wrapLines(text, TW, measureAt(500, 30))) { ctx.fillText(line, M, y); y += 40; }
+    y += 22;
+  }
+  font(500, 23); ctx.fillStyle = CARD.muted;
+  wrapLines(record.statement, TW, measureAt(500, 23)).forEach((line, i) => ctx.fillText(line, M, H - M - 40 + i * 30));
+  ctx.restore();
+
+  // Activity-specific content (the completed puzzle) on the right.
+  const box = { x: M + TW + 50, y: M + 160, w: W - (M + TW + 50) - M, h: H - (M + 160) - M };
+  ctx.save(); drawContent(ctx, box); ctx.restore();
+  return box;
+}

@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Tarsia Puzzle · The Mandarin Room</title>
   <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-b3-2">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-c2">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to setup</a>
@@ -104,6 +104,37 @@
       </aside>
     </section>
   </main>
+
+  <section id="complete-panel" class="complete-panel" role="dialog" aria-modal="true" aria-labelledby="cp-title" hidden>
+    <div class="cp-card">
+      <div class="cp-head">
+        <svg class="cp-stars" viewBox="0 0 120 36" aria-hidden="true" focusable="false"><g fill="#ffd85a" stroke="#c99a1d" stroke-width="1.5"><path d="M18 4l4 9 10 1-7.5 6.5 2.5 10L18 25l-9 5.5 2.5-10L4 14l10-1z"/><path d="M60 2l5 11 12 1-9 8 3 12-11-6.5L49 34l3-12-9-8 12-1z"/><path d="M102 4l4 9 10 1-7.5 6.5 2.5 10-9-5.5-9 5.5 2.5-10L86 14l10-1z"/></g></svg>
+        <h2 id="cp-title" tabindex="-1">Well done! <span lang="zh-Hans">太棒了！</span></h2>
+        <p id="cp-summary"></p>
+      </div>
+      <div class="cp-body">
+        <div class="cp-form">
+          <p class="help">Add your name to your learning record if you like. It stays on this device. Nothing is uploaded.</p>
+          <label class="cp-field">First name <span class="field-hint">optional</span><input id="cp-name" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
+          <label class="cp-field">Class <span class="field-hint">optional</span><input id="cp-class" maxlength="20" autocomplete="off" spellcheck="false"></label>
+          <button id="cp-save" type="button" class="primary-button" disabled>Save learning record</button>
+          <p id="cp-status" class="cp-status" role="status"></p>
+          <button id="cp-retry" type="button" class="secondary-button" hidden>Try again</button>
+          <div id="cp-fallback" class="cp-fallback" hidden>
+            <p><strong>To save it to Photos:</strong> press and hold the picture below, then choose <em>Save to Photos</em>.</p>
+            <img id="cp-fallback-img" alt="Your learning record">
+            <p class="help">On a computer you can also <a id="cp-download" href="#">download the picture</a> (it goes to your Downloads, not to Photos).</p>
+          </div>
+          <div class="cp-more">
+            <button id="cp-again" type="button" class="tool-button">Play again</button>
+            <button id="cp-setup" type="button" class="tool-button">Choose new words</button>
+            <button id="cp-close" type="button" class="tool-button">Look at my puzzle</button>
+          </div>
+        </div>
+        <figure class="cp-preview"><img id="cp-preview" alt="Preview of your learning record"><figcaption class="help">Learning record preview</figcaption></figure>
+      </div>
+    </div>
+  </section>
 
   <svg id="drag-ghost" class="drag-ghost" aria-hidden="true" focusable="false" hidden></svg>
   <dialog id="confirm" class="confirm">

@@ -3,6 +3,7 @@
 import { loadCatalogueWithTimeout } from '../vocabulary-games-core/library.mjs';
 import { setupView, setGroups, selectionFromParams, selectionToParams } from './setup-model.mjs';
 import { getTemplate, cellCorners, randomSeed } from './engine/index.mjs';
+import { devImageRelay } from './dev-relay.mjs';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -73,7 +74,9 @@ function render() {
     ? `The ${f.shapeName} needs ${f.required} words · you have ${f.usable}.` : 'Choose one or more Vocabulary Sets to begin.';
   $('start').disabled = !view.ready; $('touch-start-button').disabled = !view.ready;
   $('touch-start').hidden = false;
-  history.replaceState(null, '', `?${selectionToParams(selection)}`);
+  const query = selectionToParams(selection);
+  if (new URLSearchParams(location.search).get('devRelay') === '1') query.set('devRelay', '1'); // local developer check only
+  history.replaceState(null, '', `?${query}`);
 }
 
 // ---------- Hero: a finished long-hexagon board drawn from the real template ----------
@@ -118,11 +121,19 @@ async function start() {
   document.body.classList.add('playing');
   $('game').hidden = false;
   window.scrollTo(0, 0);
+  const leave = () => { completion?.close(); completion = null; workspace?.teardown(); workspace = null; $('game').hidden = true; $('complete-note').hidden = true;
+    document.body.classList.remove('playing', 'puzzle-complete'); render(); $('start').focus({ preventScroll: true }); };
   workspace = await openWorkspace({ puzzle, template: template(puzzle.templateId), sets: chosen.map(s => ({ id: s.id, title: s.title, chineseTitle: s.chineseTitle })),
-    onExit: () => { workspace = null; $('game').hidden = true; document.body.classList.remove('playing', 'puzzle-complete'); render(); $('start').focus({ preventScroll: true }); } });
+    onExit: leave,
+    onComplete: async ({ puzzle: done, state, sets: recordSets }) => {
+      const { openCompletionPanel } = await import('./completion-panel.mjs');
+      completion = openCompletionPanel({ puzzle: done, state, sets: recordSets, rewrite: devImageRelay(),
+        onPlayAgain: () => { leave(); start(); }, onSetup: leave });
+    } });
   window.__tarsiaWorkspace = workspace; // diagnostics only
 }
-let workspace = null;
+let workspace = null, completion = null;
+document.addEventListener('click', event => { if (event.target.closest('#record-open')) completion?.show(); });
 $('start').addEventListener('click', start);
 $('touch-start-button').addEventListener('click', start);
 $('reload').addEventListener('click', load);
