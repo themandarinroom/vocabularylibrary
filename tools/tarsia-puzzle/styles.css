@@ -277,3 +277,25 @@ body.playing .game-screen{height:calc(100dvh - 68px)}
 .cp-preview{margin:0}.cp-preview img{width:100%;height:auto;display:block;border:1px solid #e3e7de;border-radius:10px;background:#fff;min-height:120px}
 @media (max-width:760px),(orientation:portrait){.cp-body{grid-template-columns:1fr}.cp-preview{order:-1}}
 .complete-note button{margin-left:10px;min-height:40px}
+
+/* ================= Phase D1 ================= */
+.pic-frame{fill:none;stroke:#c3c9bd;stroke-width:1.2;pointer-events:none}
+.game-controls{flex-wrap:nowrap;gap:6px;min-width:0}
+.game-controls .tool-button{padding:8px 12px;white-space:nowrap;min-width:44px}
+.mode-toggle button{min-height:44px;min-width:52px;padding:6px 12px}
+.tap-tools{display:inline-flex;gap:6px}
+@media (orientation:portrait){
+  .wide-only{display:none}
+  .game-bar{grid-template-columns:1fr;gap:6px}
+  .game-controls{justify-content:space-between;width:100%}
+}
+@media (max-width:700px){.game-controls{flex-wrap:wrap}} /* phones only; iPads keep one row */
+.slot:focus{outline:none}
+.slot-cursor{fill:#0b5cad22;stroke:#0b5cad;stroke-width:5;stroke-linejoin:round;pointer-events:none}
+.piece:focus{outline:none}
+.kb-hint{display:none;margin:0 0 8px;padding:5px 8px;background:#fbfaf4;border:1px solid #d8d2b8;border-radius:10px;font-size:12.5px;line-height:1.7;color:#3d4b45}
+.kb-hint span{white-space:nowrap;margin-right:6px}
+.kb-hint kbd{font:inherit;font-weight:750;background:#f1efe4;border:1px solid #d8d2b8;border-radius:4px;padding:0 4px}
+.workspace:has(:focus-visible) .kb-hint{display:block}
+.game-screen{padding:6px max(1.4vw,8px) calc(6px + env(safe-area-inset-bottom));gap:6px}
+.workspace{gap:8px}

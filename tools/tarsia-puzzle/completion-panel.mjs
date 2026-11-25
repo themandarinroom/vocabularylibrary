@@ -91,10 +91,12 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
   $('cp-close').addEventListener('click', hide, on);
   panel.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); }, on);
 
-  function show() { panel.hidden = false; $('cp-title').focus({ preventScroll: true }); }
-  function hide() { panel.hidden = true; $('record-open')?.focus(); }
+  // D1: the panel is modal for keyboard users too — everything behind it is inert while it is open.
+  const backdrop = on => { for (const el of document.body.children) if (el !== panel && el.tagName !== 'SCRIPT' && el.tagName !== 'DIALOG') el.inert = on; };
+  function show() { backdrop(true); panel.hidden = false; $('cp-title').focus({ preventScroll: true }); }
+  function hide() { panel.hidden = true; backdrop(false); $('record-open')?.focus(); }
   function close() {
-    closed = true; ac.abort(); clearTimeout(timer); panel.hidden = true;
+    closed = true; ac.abort(); clearTimeout(timer); panel.hidden = true; backdrop(false);
     for (const u of [previewUrl, fallbackUrl]) if (u) URL.revokeObjectURL(u);
     $('cp-preview').removeAttribute('src'); $('cp-fallback-img').removeAttribute('src');
     $('cp-name').value = ''; $('cp-class').value = ''; // nothing about the student is kept after the puzzle closes

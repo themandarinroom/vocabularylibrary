@@ -45,7 +45,9 @@ export function drawTarsiaBoard(ctx, box, content, images, { measure } = {}) {
       ctx.save(); ctx.translate(c.x + n.x * item.depth, c.y + n.y * item.depth); ctx.rotate(angle);
       if (edge.kind === 'picture') {
         ctx.drawImage(images.get(edge.image).image, -item.imageW / 2, -item.imageH / 2, item.imageW, item.imageH);
-        minPicture = Math.min(minPicture, item.D);
+        // Thin neutral frame so flags with white areas (e.g. Ireland) keep their outline on the cream piece.
+        ctx.strokeStyle = '#c3c9bd'; ctx.lineWidth = 2; ctx.strokeRect(-item.imageW / 2, -item.imageH / 2, item.imageW, item.imageH);
+        minPicture = Math.min(minPicture, Math.min(item.imageW, item.imageH)); // shorter side of the printed picture
       } else {
         ctx.font = `600 ${item.fontPx}px ${edge.kind === 'hanzi' ? FONT.hanzi : FONT.latin}`; ctx.fillStyle = COLOR[edge.kind];
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

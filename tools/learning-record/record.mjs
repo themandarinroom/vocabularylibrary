@@ -5,7 +5,7 @@
 
 export const RECORD_SCHEMA_VERSION = 1;
 // Shown on every record: it documents successful completion, not independent mastery.
-export const STATEMENT = 'This record shows that the activity was completed successfully. It does not measure independent vocabulary mastery.';
+export const STATEMENT = 'This record shows that the activity was completed successfully.'; // D1: owner removed the second sentence
 export const EXPORT_FORMAT = Object.freeze({ type: 'image/png', width: 1748, height: 1240, paper: 'A6 landscape', dpi: 300, background: '#ffffff' });
 
 const text = (value, max) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';

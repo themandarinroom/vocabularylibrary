@@ -81,9 +81,9 @@
         <div class="progress-row"><div id="progress" class="progress" role="progressbar" aria-label="Correct matches" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"><span id="progress-bar"></span></div>
           <span id="progress-text" class="progress-text" aria-live="polite"></span></div>
         <div class="game-controls">
-          <span class="mode-toggle" role="group" aria-label="How to move pieces"><button id="mode-drag" type="button" aria-pressed="true">Drag</button><button id="mode-tap" type="button" aria-pressed="false">Tap to place</button></span>
-          <span class="tap-tools" id="tap-tools" hidden><button id="turn-btn" type="button" class="tool-button" disabled>↻ Turn</button><button id="back-btn" type="button" class="tool-button" disabled>Back to tray</button></span>
-          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank <span lang="zh-Hans">词库</span></button>
+          <span class="mode-toggle" role="group" aria-label="How to move pieces"><button id="mode-drag" type="button" aria-pressed="true">Drag</button><button id="mode-tap" type="button" aria-pressed="false" aria-label="Tap to place" title="Tap to place">Tap</button></span>
+          <span class="tap-tools" id="tap-tools" hidden><button id="turn-btn" type="button" class="tool-button" aria-label="Turn the selected piece" title="Turn (R)" disabled><span aria-hidden="true">↻</span> Turn</button><button id="back-btn" type="button" class="tool-button" aria-label="Put the selected piece back in the tray" title="Back to tray (Delete)" disabled><span aria-hidden="true">↩</span> Tray</button></span>
+          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank<span class="wide-only" lang="zh-Hans"> 词库</span></button>
           <button id="shuffle-btn" type="button" class="tool-button">Shuffle</button>
           <button id="restart-btn" type="button" class="tool-button">Restart</button>
           <button id="setup-btn" type="button" class="tool-button">Setup</button>
@@ -91,9 +91,11 @@
       </div>
       <p id="complete-note" class="complete-note" role="status" hidden></p>
       <div id="workspace" class="workspace">
-        <div id="board-wrap" class="board-wrap"><svg id="board" class="board" role="img" aria-label="Puzzle board"></svg></div>
+        <div id="board-wrap" class="board-wrap"><svg id="board" class="board" role="group" aria-label="Puzzle board"></svg>
+          <p id="kb-status" class="sr-only" aria-live="polite"></p></div>
         <section id="tray" class="tray" aria-label="Pieces to place">
           <p id="tray-count" class="tray-count"></p>
+          <p id="kb-help" class="kb-hint"><b>Keyboard:</b> <span><kbd>Enter</kbd> select</span> <span><kbd>←↑→↓</kbd> choose a space</span> <span><kbd>Enter</kbd> place</span> <span><kbd>R</kbd> turn</span> <span><kbd>Delete</kbd> back to tray</span> <span><kbd>Esc</kbd> cancel</span></p>
           <div id="tray-list" class="tray-list"></div>
         </section>
       </div>

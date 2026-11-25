@@ -500,7 +500,7 @@ test('success criteria take N from the selected template', () => {
     assert.equal(record.successCriteria, `I can complete a Tarsia puzzle by correctly matching all ${n} vocabulary pairs.`);
     assert.equal(record.matchesCompleted, n);
     assert.match(record.statement, /completed successfully/);
-    assert.match(record.statement, /does not measure independent vocabulary mastery/);
+    assert.equal(record.statement, 'This record shows that the activity was completed successfully.');
     assert.doesNotMatch(JSON.stringify(record), /\bmaster(ed|y of)\b/i, 'no claim of mastery');
   }
   assert.throws(() => buildCompletionRecord({ activity: {}, completedAt: new Date(), vocabularySets: [], difficulty: {}, matchingMode: {},

@@ -70,7 +70,7 @@ const fakeImages = urls => new Map(urls.map((u, i) => [u, { image: { id: u }, wi
 function mockCtx() {
   const calls = []; let angle = 0;
   return { calls, set font(v) {}, set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {}, set lineJoin(v) {}, set lineCap(v) {}, set textAlign(v) {}, set textBaseline(v) {}, set globalAlpha(v) {},
-    save() {}, restore() { angle = 0; }, translate() {}, rotate(a) { angle = a; }, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {},
+    save() {}, restore() { angle = 0; }, translate() {}, rotate(a) { angle = a; }, beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, strokeRect() {},
     measureText: t => ({ width: t.length * 10 }),
     fillText(text) { calls.push({ op: 'text', text, angle }); }, drawImage(img, x, y, w, h) { calls.push({ op: 'image', img, w, h, angle }); } };
 }

@@ -14,7 +14,7 @@ export async function sweep(offset = 0) {
     await new Promise(r => setTimeout(r, 600));
     const w = window.__tarsiaWorkspace, all = [...w.layouts.values()].flat().filter(Boolean), tray = document.querySelector('.tray-item');
     out.push({ shape, mode, side: w.side, minFont: +Math.min(...all.filter(x => x.fontPx).map(x => x.fontPx)).toFixed(1),
-      minPic: all.some(x => x.D) ? Math.round(Math.min(...all.filter(x => x.D).map(x => x.D))) : null, overflow: all.filter(x => x.overflow).length,
+      minPic: all.some(x => x.kind === 'picture') ? (p => `${Math.round(p.imageW)}×${Math.round(p.imageH)}`)(all.filter(x => x.kind === 'picture').sort((a, b) => a.imageW * a.imageH - b.imageW * b.imageH)[0]) : null, overflow: all.filter(x => x.overflow).length,
       trayPieceW: tray ? Math.round(tray.getBoundingClientRect().width) : 0, hOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth });
     document.getElementById('setup-btn').click();
     await new Promise(r => setTimeout(r, 300));

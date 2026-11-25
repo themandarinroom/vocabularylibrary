@@ -58,12 +58,18 @@ export function generatePuzzle(options) {
   // 2–3. Validate the pool and select the words.
   const chosen = chooseWords(options.entries || [], mode.sides, template.requiredPairs, random, options.limits);
 
-  // 4–6. Words onto shared edges; a coin flip decides which side shows which representation. Boundaries stay blank.
+  // 4–6. Words onto shared edges. Boundaries stay blank.
+  // D1 (owner request): both labels of a pair are printed at the same angle (A: dir−180°, B: dir), so choosing which
+  // piece carries side A fixes how the pair reads in the FINISHED puzzle. We choose the way that reads the right way
+  // up: across a horizontal edge both labels are upright; across a sloping edge they lean ±60°, never upside down.
+  // Labels still turn rigidly with their piece while it is being played (printed rule unchanged).
   const labelsBySlot = new Map(template.slots.map(s => [s.id, new Map(s.dirs.map(d => [d, null]))]));
   const order = random.shuffle(chosen);
+  const readsUpright = deg => { const a = ((deg % 360) + 360) % 360; return a < 90 || a > 270; };
   template.internalEdges.forEach((edge, i) => {
     const { entry, labels } = order[i];
-    const flip = random.coin();
+    random.coin(); // was the side coin flip; still drawn so every seed keeps the same words, pieces and rotations
+    const flip = !readsUpright(edge.aDir - 180); // slot a carries side A only if A reads upright there
     const sideA = Object.freeze({ pair: entry.key, side: 'A', ...labels[0] });
     const sideB = Object.freeze({ pair: entry.key, side: 'B', ...labels[1] });
     labelsBySlot.get(edge.a).set(edge.aDir, flip ? sideB : sideA);

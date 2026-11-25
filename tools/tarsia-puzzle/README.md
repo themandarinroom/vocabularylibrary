@@ -33,3 +33,28 @@ Prototype: serve the repository root and open `/tools/tarsia-puzzle/dev/` (for e
   - Measured label layout (`label-layout.mjs`): minimum 18 px Hanzi and 14 px Pinyin/English, nothing truncated.
   - Compact 68 px gameplay header. Drag & Drop by default, with an optional Tap-to-place mode (tap selects; the Turn button rotates).
   - `dev/sweep.mjs` measures every shape at the current viewport.
+
+## Keyboard (Phase D1)
+
+The whole puzzle can be finished with the keyboard alone, in Drag or Tap mode. Starting pieces are fixed, so they are not tab stops.
+
+| Key | Where | What it does |
+|---|---|---|
+| Tab / Shift+Tab | anywhere | Moves between the controls, then each piece (tray first, then pieces on the board) |
+| Enter or Space | a piece | Selects it. Focus moves to a space on the board, shown by a blue outline |
+| ← ↑ → ↓ | a space | Moves to the nearest space in that direction. Stops at the edge of the board |
+| Enter or Space | a space | Places the selected piece there. A wrong-way drop turns it automatically, based on geometry only |
+| R | a piece, or a space while a piece is selected | Turns the piece: 60° in the tray, 120° on the board |
+| Delete or Backspace | a piece on the board | Puts it back in the tray |
+| Escape | while a piece is selected | Cancels the selection |
+| Escape | completion panel | Closes the panel. **Learning record** reopens it |
+
+- **Visual hint:** the hint line at the top of the tray appears only while keyboard focus is in the puzzle, and never covers the board.
+- **Screen readers:**
+  - every piece is read with all its labels, and pictures by their English meaning;
+  - every space is read as "Space i of n, empty / has a piece";
+  - after a placement the page says "Placed. X of N matches" (polite live region).
+- **Completion panel:** while it is open it is modal, so everything behind it is inert.
+- **Developer checks:**
+  - `dev/keyboard-through.mjs` finishes a puzzle using only key events;
+  - `dev/sweep.mjs` measures board, label and picture sizes.

@@ -37,3 +37,32 @@ export function tapSlot(state, template, selected, slotId) {
   const result = placePiece(state, template, selected, slotId);
   return result.ok ? { ...result, selected: null } : { ...result, selected };
 }
+
+// Keyboard (D1): arrow keys move the space cursor to the nearest slot in that direction (by slot centres).
+// Returns the same slot when there is nothing further that way.
+export function slotNeighbour(template, slotId, key) {
+  const from = template.slotById.get(slotId)?.centroid;
+  if (!from) return template.slots[0]?.id ?? null;
+  const dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[key];
+  if (!dir) return slotId;
+  let best = slotId, bestScore = Infinity;
+  for (const s of template.slots) {
+    if (s.id === slotId) continue;
+    const dx = s.centroid.x - from.x, dy = s.centroid.y - from.y;
+    const along = dx * dir[0] + dy * dir[1], across = Math.abs(dx * dir[1] - dy * dir[0]);
+    if (along <= 0.05) continue;                          // must lie in that direction
+    const score = along + across;                          // nearest space roughly in that direction (visits ▲ and ▼ in turn)
+    if (score < bestScore) { best = s.id; bestScore = score; }
+  }
+  return best;
+}
+
+// Spoken description of a piece for screen readers. Pictures are described by their word's English meaning.
+export function pieceDescription(piece, words) {
+  const parts = piece.edges.filter(Boolean).map(l => l.kind === 'picture' ? `a picture of ${words.get(l.pair)?.english || 'a word'}` : l.text);
+  return parts.length ? `Piece with ${parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}` : 'Blank piece';
+}
+export const slotDescription = (template, slotId, occupied) => {
+  const i = template.slots.findIndex(s => s.id === slotId) + 1;
+  return `Space ${i} of ${template.slots.length}, ${occupied ? 'has a piece' : 'empty'}`;
+};

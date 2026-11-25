@@ -3,7 +3,12 @@
 // hands a content box to the activity's own renderer (e.g. the Tarsia board). White, print-friendly, no controls.
 import { EXPORT_FORMAT } from '../learning-record/record.mjs';
 
-export const CARD = Object.freeze({ width: EXPORT_FORMAT.width, height: EXPORT_FORMAT.height, margin: 64, textWidth: 600,
+// Paper formats at 300 dpi. The card is designed in A6 units and scaled up for A5 (same layout, 1.42× larger in print).
+export const FORMATS = Object.freeze({ A6: Object.freeze({ id: 'A6', width: 1748, height: 1240, mm: [148, 105] }), A5: Object.freeze({ id: 'A5', width: 2480, height: 1748, mm: [210, 148] }) });
+export const pxToPt = (px, format = FORMATS.A6) => px * (format.width / FORMATS.A6.width) * 72 / 300;
+export const pxToMm = (px, format = FORMATS.A6) => px * (format.width / FORMATS.A6.width) * 25.4 / 300;
+
+export const CARD = Object.freeze({ width: EXPORT_FORMAT.width, height: EXPORT_FORMAT.height, margin: 60, textWidth: 520,
   ink: '#0c193b', muted: '#5b6b80', accent: '#0d4b8f', ok: '#1f7a45', rule: '#d7dde6',
   font: '"Avenir Next", Avenir, "Segoe UI", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif' });
 
@@ -24,9 +29,11 @@ const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-AU'
  * @param {object} record  from buildCompletionRecord()
  * @param {{ emblem?: CanvasImageSource, drawContent: (ctx, box) => void, puzzleLine?: string }} options
  */
-export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine }) {
+export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine, format = FORMATS.A6 }) {
   const { width: W, height: H, margin: M, textWidth: TW } = CARD;
   ctx.save();
+  const k = format.width / W; // draw in A6 units; A5 is the same card scaled up
+  ctx.setTransform(k, 0, 0, k, 0, 0);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = CARD.rule; ctx.lineWidth = 4; ctx.strokeRect(22, 22, W - 44, H - 44);
   ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
@@ -47,7 +54,7 @@ export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine })
   for (const [label, value] of rows) {
     font(500, 30); ctx.fillStyle = CARD.muted; ctx.fillText(label, M, y);
     font(650, 31); ctx.fillStyle = CARD.ink;
-    for (const line of wrapLines(value, TW - 190, measureAt(650, 31))) { ctx.fillText(line, M + 190, y); y += 42; }
+    for (const line of wrapLines(value, TW - 180, measureAt(650, 31))) { ctx.fillText(line, M + 180, y); y += 42; }
     y += 10;
   }
   y += 18;
@@ -61,8 +68,8 @@ export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine })
   wrapLines(record.statement, TW, measureAt(500, 23)).forEach((line, i) => ctx.fillText(line, M, H - M - 40 + i * 30));
   ctx.restore();
 
-  // Activity-specific content (the completed puzzle) on the right.
-  const box = { x: M + TW + 50, y: M + 160, w: W - (M + TW + 50) - M, h: H - (M + 160) - M };
-  ctx.save(); drawContent(ctx, box); ctx.restore();
+  // Activity-specific content (the completed puzzle) on the right: D1 gives it most of the card.
+  const box = { x: M + TW + 36, y: M + 146, w: W - (M + TW + 36) - M + 10, h: H - (M + 146) - M + 14 };
+  ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0); drawContent(ctx, box); ctx.restore();
   return box;
 }

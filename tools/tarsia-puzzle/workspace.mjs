@@ -3,7 +3,7 @@
 import { rotatePiece, placePiece, removePiece, resetState, edgeStatuses, cellCorners, cellCentroid, cellEdge,
   createRandom, wordBank, tarsiaCompletionRecord, H } from './engine/index.mjs';
 import { layoutPiece, placeLabel } from './label-layout.mjs';
-import { progressOf, shuffleTray, hasProgress, puzzleInfo, tapPiece, tapSlot } from './workspace-model.mjs';
+import { progressOf, shuffleTray, hasProgress, puzzleInfo, tapPiece, tapSlot, slotNeighbour, pieceDescription, slotDescription } from './workspace-model.mjs';
 import { createGesture } from './gesture.mjs';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -36,6 +36,9 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
   const pieceById = new Map(puzzle.pieces.map(p => [p.id, p]));
   let state = resetState(puzzle), S = 0, layouts = new Map(), origin = { x: 0, y: 0 }, drag = null, completed = false, broken = new Set();
   let interaction = 'drag', selected = null; // Tap-to-place: tap selects, Turn button rotates
+  let cursorSlot = null, focusAfter = null;   // keyboard: space cursor and the element to refocus after a redraw
+  const say = text => { $('kb-status').textContent = ''; requestAnimationFrame(() => { $('kb-status').textContent = text; }); };
+  const describe = id => pieceDescription(pieceById.get(id), words);
 
   // ---------- Header info ----------
   const info = puzzleInfo(puzzle, setTitles);
@@ -52,11 +55,11 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     // Portrait: give the board only the height its shape needs at full width; the tray gets the rest.
     const ws = $('workspace'), portrait = matchMedia('(orientation: portrait)').matches;
     if (portrait) {
-      const box = ws.getBoundingClientRect(), sideAtWidth = (box.width - 28) / (bounds.maxX - bounds.minX);
-      const boardH = Math.round(sideAtWidth * (bounds.maxY - bounds.minY) + 28), trayMin = 170;
+      const box = ws.getBoundingClientRect(), sideAtWidth = (box.width - 16) / (bounds.maxX - bounds.minX);
+      const boardH = Math.round(sideAtWidth * (bounds.maxY - bounds.minY) + 16), trayMin = 170;
       ws.style.gridTemplateRows = boardH + trayMin + 10 <= box.height ? `${boardH}px minmax(${trayMin}px, 1fr)` : '';
     } else ws.style.gridTemplateRows = '';
-    const wrap = $('board-wrap').getBoundingClientRect(), pad = 14;
+    const wrap = $('board-wrap').getBoundingClientRect(), pad = 8; // D1: tighter inner margin → larger pieces
     const next = Math.floor(Math.min((wrap.width - 2 * pad) / (bounds.maxX - bounds.minX), (wrap.height - 2 * pad) / (bounds.maxY - bounds.minY)));
     if (next !== S && next > 20) {
       S = next;
@@ -83,9 +86,10 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     if (label.kind === 'picture') {
       if (pictures.get(label.image)?.broken || broken.has(label.image)) {
         const word = words.get(label.pair);
-        return `<g transform="translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) rotate(${at.angle})"><circle r="${(item.D / 2).toFixed(1)}" class="pic-missing"/><text class="label english" style="font-size:${Math.max(12, item.D / 5).toFixed(1)}px" dominant-baseline="central" text-anchor="middle">${esc(word?.english || '?')}</text></g>`;
+        return `<g transform="translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) rotate(${at.angle})"><rect x="${(-item.imageW / 2).toFixed(1)}" y="${(-item.imageH / 2).toFixed(1)}" width="${item.imageW.toFixed(1)}" height="${item.imageH.toFixed(1)}" rx="4" class="pic-missing"/><text class="label english" style="font-size:${Math.max(12, item.imageH / 3).toFixed(1)}px" dominant-baseline="central" text-anchor="middle">${esc(word?.english || '?')}</text></g>`;
       }
-      return `<image href="${esc(label.image)}" x="${(-item.imageW / 2).toFixed(1)}" y="${(-item.imageH / 2).toFixed(1)}" width="${item.imageW.toFixed(1)}" height="${item.imageH.toFixed(1)}" preserveAspectRatio="xMidYMid meet" transform="translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) rotate(${at.angle})" data-src="${esc(label.image)}"/>`;
+      const box = `x="${(-item.imageW / 2).toFixed(1)}" y="${(-item.imageH / 2).toFixed(1)}" width="${item.imageW.toFixed(1)}" height="${item.imageH.toFixed(1)}"`;
+      return `<g transform="translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) rotate(${at.angle})"><image href="${esc(label.image)}" ${box} preserveAspectRatio="xMidYMid meet" data-src="${esc(label.image)}"/><rect ${box} class="pic-frame"/></g>`;
     }
     const lh = item.fontPx * 1.18, n = item.lines.length;
     return `<text class="label ${label.kind}" style="font-size:${item.fontPx.toFixed(1)}px" text-anchor="middle" dominant-baseline="central" transform="translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) rotate(${at.angle})"${label.kind === 'hanzi' ? ' lang="zh-Hans"' : ''}>${
@@ -104,21 +108,26 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     if (!S) return;
     const parts = [];
     const occupied = new Set(Object.values(state.pieces).map(p => p.slot).filter(Boolean));
-    for (const slot of template.slots) parts.push(`<polygon class="slot${selected && !occupied.has(slot.id) ? ' tap-target' : ''}" data-slot="${slot.id}" points="${pts(cellCorners(slot.row, slot.col).map(toBoard))}"/>`);
+    for (const slot of template.slots) parts.push(`<polygon class="slot${selected && !occupied.has(slot.id) ? ' tap-target' : ''}" data-slot="${slot.id}" points="${pts(cellCorners(slot.row, slot.col).map(toBoard))}" tabindex="-1" role="button" aria-label="${esc(slotDescription(template, slot.id, occupied.has(slot.id)))}"/>`);
     for (const piece of puzzle.pieces) {
       const p = state.pieces[piece.id];
       if (!p.slot) continue;
       const c = slotCentre(p.slot);
-      parts.push(`<g class="piece${p.locked ? ' is-locked' : ''}${selected === piece.id ? ' selected' : ''}" data-piece="${piece.id}" transform="translate(${c.x.toFixed(1)} ${c.y.toFixed(1)})" ${p.locked ? '' : 'tabindex="0" role="button"'} aria-label="${p.locked ? 'Starting piece (fixed)' : 'Puzzle piece on the board. Tap to turn, drag to move.'}">${pieceInner(piece, p.rotation, p.locked)}</g>`);
+      parts.push(`<g class="piece${p.locked ? ' is-locked' : ''}${selected === piece.id ? ' selected' : ''}" data-piece="${piece.id}" transform="translate(${c.x.toFixed(1)} ${c.y.toFixed(1)})" ${p.locked ? '' : 'tabindex="0" role="button" aria-describedby="kb-help"'} aria-label="${esc(p.locked ? `Starting piece (fixed). ${describe(piece.id)}` : `${describe(piece.id)}. On the board, ${slotDescription(template, p.slot, true)}`)}">${pieceInner(piece, p.rotation, p.locked)}</g>`);
     }
     // Subtle positive feedback: a short green mark on each correctly matched shared edge.
     for (const e of edgeStatuses(puzzle, state, template)) if (e.status === 'match') {
       const s = template.slotById.get(e.a), [a, b] = cellEdge(s.row, s.col, e.aDir).map(toBoard), k = 0.3;
       parts.push(`<line class="match-mark" x1="${(a.x + (b.x - a.x) * k).toFixed(1)}" y1="${(a.y + (b.y - a.y) * k).toFixed(1)}" x2="${(b.x - (b.x - a.x) * k).toFixed(1)}" y2="${(b.y - (b.y - a.y) * k).toFixed(1)}"/>`);
     }
+    if (cursorSlot) parts.push(`<polygon class="slot-cursor" points="${pts(cellCorners(template.slotById.get(cursorSlot).row, template.slotById.get(cursorSlot).col).map(toBoard))}"/>`);
     $('board').innerHTML = parts.join('');
     renderTray();
     renderProgress();
+    if (focusAfter) { // keep keyboard focus on the same piece or space after the redraw
+      const el = focusAfter.slot ? document.querySelector(`.slot[data-slot="${focusAfter.slot}"]`) : document.querySelector(`[data-piece="${focusAfter.piece}"]`);
+      focusAfter = null; el?.focus({ preventScroll: false });
+    }
   }
 
   // ---------- Tray: same drawing, scaled to fit, scrolls on its own ----------
@@ -133,7 +142,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     $('tray-count').textContent = state.tray.length ? `${state.tray.length} ${state.tray.length === 1 ? 'piece' : 'pieces'} left` : 'All pieces are on the board';
     $('tray-list').innerHTML = state.tray.map(id => {
       const p = state.pieces[id], up = p.rotation % 2 === 0, top = up ? -2 * h / 3 : -h / 3;
-      return `<div class="tray-item${selected === id ? ' selected' : ''}" data-piece="${id}" tabindex="0" role="button" aria-label="Puzzle piece. Tap to turn, drag to the board.">
+      return `<div class="tray-item${selected === id ? ' selected' : ''}" data-piece="${id}" tabindex="0" role="button" aria-describedby="kb-help" aria-label="${esc(describe(id))}. In the tray.">
         <svg viewBox="${(-S / 2 - 3).toFixed(1)} ${(top - 3).toFixed(1)} ${(S + 8).toFixed(1)} ${(h + 8).toFixed(1)}" aria-hidden="true" focusable="false">${pieceInner(pieceById.get(id), p.rotation, false)}</svg></div>`;
     }).join('');
   }
@@ -205,7 +214,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
       return apply(rotatePiece(state, template, d.id));
     }
     if (kind !== 'drag') return render();
-    if (d.target) { if (selected === d.id) selected = null; updateTapTools(); return apply(placePiece(state, template, d.id, d.target)); }
+    if (d.target) { if (selected === d.id) { selected = null; cursorSlot = null; } updateTapTools(); return apply(placePiece(state, template, d.id, d.target)); }
     if (d.overTray && state.pieces[d.id].slot) return apply(removePiece(state, template, d.id));
     render(); // dropped elsewhere: the piece goes back exactly where it was
   }
@@ -235,13 +244,51 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
   workspace.addEventListener('pointercancel', event => { if (drag && event.pointerId === drag.pointerId) endDrag(true, event); }, on);
   workspace.addEventListener('contextmenu', event => event.preventDefault(), on);
   workspace.addEventListener('dragstart', event => event.preventDefault(), on);
+  // Keyboard (D1): Tab to a piece · Enter/Space select · arrow keys choose a space · Enter/Space place · R turn ·
+  // Delete/Backspace back to the tray · Escape cancel. Works in both Drag and Tap modes; locked pieces are skipped.
   workspace.addEventListener('keydown', event => {
-    const el = event.target.closest?.('[data-piece]');
-    if (!el || completed || !(event.key === 'Enter' || event.key === ' ')) return;
-    event.preventDefault();
-    const id = el.dataset.piece;
-    if (interaction === 'tap') { selected = tapPiece(state, selected, id); updateTapTools(); render(); } else apply(rotatePiece(state, template, id));
-    document.querySelector(`[data-piece="${id}"]`)?.focus();
+    if (completed) return;
+    const key = event.key, pieceEl = event.target.closest?.('[data-piece]'), slotEl = event.target.closest?.('.slot');
+    const isSelect = key === 'Enter' || key === ' ', isTurn = key === 'r' || key === 'R', isBack = key === 'Delete' || key === 'Backspace';
+    if (key === 'Escape' && (selected || cursorSlot)) {
+      event.preventDefault(); const id = selected; selected = null; cursorSlot = null; updateTapTools();
+      focusAfter = id ? { piece: id } : null; render(); say('Cancelled.'); return;
+    }
+    if (pieceEl && state.pieces[pieceEl.dataset.piece] && !state.pieces[pieceEl.dataset.piece].locked) {
+      const id = pieceEl.dataset.piece;
+      if (isSelect) {
+        event.preventDefault(); selected = tapPiece(state, selected, id); updateTapTools();
+        if (selected) {
+          const empty = template.slots.find(sl => !Object.values(state.pieces).some(p => p.slot === sl.id));
+          cursorSlot = state.pieces[id].slot || empty?.id || template.slots[0].id; focusAfter = { slot: cursorSlot };
+          say(`Selected. ${describe(id)}. Use the arrow keys to choose a space, Enter to place it, R to turn it, Escape to cancel.`);
+        } else { cursorSlot = null; focusAfter = { piece: id }; say('Selection cleared.'); }
+        render(); return;
+      }
+      if (isTurn) { event.preventDefault(); focusAfter = { piece: id }; apply(rotatePiece(state, template, id)); say(state.pieces[id].slot ? 'Turned 120 degrees.' : 'Turned 60 degrees.'); return; }
+      if (isBack && state.pieces[id].slot) {
+        event.preventDefault(); if (selected === id) { selected = null; cursorSlot = null; updateTapTools(); }
+        focusAfter = { piece: id }; apply(removePiece(state, template, id)); say('Back in the tray.'); return;
+      }
+    }
+    if (slotEl && selected) {
+      const slotId = slotEl.dataset.slot;
+      if (key.startsWith('Arrow')) {
+        event.preventDefault(); cursorSlot = slotNeighbour(template, slotId, key); focusAfter = { slot: cursorSlot }; render();
+        say(slotDescription(template, cursorSlot, Object.values(state.pieces).some(p => p.slot === cursorSlot))); return;
+      }
+      if (isSelect) {
+        event.preventDefault(); const id = selected, r = tapSlot(state, template, selected, slotId);
+        if (!r.ok) { say(r.reason === 'occupied' ? 'This space already has a piece. Choose an empty space.' : 'The piece cannot go there.'); return; }
+        state = r.state; selected = null; cursorSlot = null; updateTapTools(); focusAfter = { piece: id }; render();
+        const pr = progressOf(puzzle, state, template); say(`Placed. ${pr.matched} of ${pr.total} matches.`); return;
+      }
+      if (isTurn) { event.preventDefault(); focusAfter = { slot: slotId }; apply(rotatePiece(state, template, selected)); say('Turned.'); return; }
+      if (isBack && state.pieces[selected].slot) {
+        event.preventDefault(); const id = selected; selected = null; cursorSlot = null; updateTapTools();
+        focusAfter = { piece: id }; apply(removePiece(state, template, id)); say('Back in the tray.'); return;
+      }
+    }
   }, on);
   $('board').addEventListener('error', event => { const src = event.target.getAttribute?.('data-src'); if (src && !broken.has(src)) { broken.add(src); render(); } }, { capture: true, signal: ac.signal });
 
@@ -267,7 +314,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     'back-btn': () => { if (selected && state.pieces[selected].slot) { apply(removePiece(state, template, selected)); } }
   };
   function setInteraction(mode) { // switching never changes the puzzle state
-    interaction = mode; selected = null;
+    interaction = mode; selected = null; cursorSlot = null;
     $('mode-drag').setAttribute('aria-pressed', String(mode === 'drag')); $('mode-tap').setAttribute('aria-pressed', String(mode === 'tap'));
     $('tap-tools').hidden = mode !== 'tap'; updateTapTools(); render();
   }
@@ -278,7 +325,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     const slot = event.target.closest?.('.slot');
     if (interaction !== 'tap' || !slot || completed) return;
     const result = tapSlot(state, template, selected, slot.dataset.slot);
-    if (result.ok) { state = result.state; selected = result.selected; updateTapTools(); render(); }
+    if (result.ok) { state = result.state; selected = result.selected; cursorSlot = null; updateTapTools(); render(); }
   }, on);
   const onClick = event => { const b = event.target.closest('button[id]'); if (b && controls[b.id]) controls[b.id](); };
   document.addEventListener('click', onClick, on);

@@ -2,13 +2,13 @@
 // `measure(text, fontPx, kind)` (canvas in the browser, an estimate in tests).
 //
 // Each piece's three labels are laid out together in the piece's own frame (▲, centroid at the origin):
-//  - text sits in a band along its edge as a rectangle (one or two lines); pictures sit in a circle that turns with the piece,
-//    with the whole image inscribed in the circle (never cropped or stretched);
+//  - text sits in a band along its edge as a rectangle (one to three lines); a picture is printed along its edge too,
+//    as a rectangle with the image's own proportions (never cropped or stretched), turning with the piece;
 //  - every shape must stay inside the triangle (with a margin) and clear of the other two labels;
 //  - labels start large and the one with the most room to give shrinks first, down to a readable minimum.
 // Nothing is ever truncated or abbreviated. A label that still cannot fit at the minimum is reported as overflow.
 //
-// Shapes are rotation-invariant (a rectangle turned 180° covers the same area; pictures use circles), so the
+// Shapes are rotation-invariant (a rectangle turned 180° covers the same area), so the
 // layout is computed once per piece and size; `placeLabel` then positions it rigidly for any of the six rotations.
 import { UP_DIRS, edgeDirection } from './engine/geometry.mjs';
 
@@ -17,7 +17,7 @@ export const LAYOUT = Object.freeze({
   maxFont: { hanzi: 0.17, pinyin: 0.125, english: 0.125 },   // × side
   minFontPx: { hanzi: 18, pinyin: 14, english: 14 },          // approved readability floor in CSS px at the size drawn
   maxFontPx: { hanzi: 46, pinyin: 32, english: 30 },          // cap so small puzzles' big pieces don't get oversized text
-  picture: { max: 0.42, min: 0.18 },                          // circle diameter × side
+  picture: { maxH: 0.40, minH: 0.10, maxW: 0.64 },            // picture height and width limits × side (D1: edge-aligned)
   edgeGap: 0.045,                                             // label to its own edge, × side (clears the edge line)
   margin: 0.03,                                               // label to the other edges, × side
   labelGap: 0.02                                              // between labels, × side
@@ -50,10 +50,13 @@ export function lineOptions(text, kind) {
 // Candidate sizes for one label, best first: biggest font, one line before two.
 function candidates(label, side, measure, layout) {
   if (label.kind === 'picture') {
-    const out = [], a = label.aspect > 0 ? label.aspect : 1.5;
-    for (let d = layout.picture.max; d >= layout.picture.min - 1e-9; d -= 0.02) {
-      const D = d * side, k = 1 / Math.sqrt(1 + a * a);
-      out.push({ kind: 'picture', D, imageW: D * a * k, imageH: D * k, fontPx: null });
+    // D1: a picture is printed along its edge like text, so it is a rectangle with the image's own proportions.
+    // Wide flags (2:1) use the long edge instead of being squeezed into a circle.
+    const out = [], a = label.aspect > 0 ? label.aspect : 1.5, P = layout.picture;
+    for (let hf = P.maxH; hf >= P.minH - 1e-9; hf -= 0.01) {
+      let h = hf * side, w = h * a;
+      if (w > P.maxW * side) { w = P.maxW * side; h = w / a; }
+      out.push({ kind: 'picture', imageW: w, imageH: h, w, h, D: h, fontPx: null });
     }
     return out;
   }
@@ -72,7 +75,6 @@ function candidates(label, side, measure, layout) {
 // The shape a candidate occupies when it sits on edge i (piece frame).
 function shapeOf(c, i, side, layout) {
   const dir = UP_DIRS[i], n = normal(dir), u = along(dir), r = side / (2 * SQ3), gap = layout.edgeGap * side;
-  if (c.kind === 'picture') { const R = c.D / 2, d = r - gap - R; return { type: 'circle', c: { x: n.x * d, y: n.y * d }, R, depth: d }; }
   const d = r - gap - c.h / 2;
   return { type: 'rect', c: { x: n.x * d, y: n.y * d }, u, n, hw: c.w / 2, hh: c.h / 2, depth: d };
 }
