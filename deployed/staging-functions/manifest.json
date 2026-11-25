@@ -1,0 +1,720 @@
+{
+  "project": "the-mandarin-room-staging",
+  "region": "australia-southeast1",
+  "recordedAt": "2026-11-26",
+  "note": "Exact deployed source of every Staging Cloud Function, downloaded read-only from Cloud Functions (v2) on 2026-11-26. One folder per distinct deployed source bundle.",
+  "bundles": [
+    {
+      "folder": "2026-08-30_ae97b635c6ad",
+      "zipSha256": "ae97b635c6ad32bf4b5aab4e980127d2fb196c6e382544887f5db269a3017935",
+      "functions": [
+        {
+          "function": "drawLiveGameWord",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "expireDisconnectedLiveDevices",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "joinLiveGameSession",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "cleanupExpiredLiveSessions",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "controlLiveGameSession",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "heartbeatLiveGameSession",
+          "updated": "2026-08-30T10:32",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "8a819a05bea266e2ddee5f8a92e9917e88664e30dcc200d023f7e4ff15eeb5ae",
+          "bytes": 11116
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "a2de9b9bbaea4171a1ef5ba579366a4b0e80caf98a1b59dea2017e201a57b953",
+          "bytes": 26083
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        }
+      ]
+    },
+    {
+      "folder": "2026-09-01_43dc120db45a",
+      "zipSha256": "43dc120db45a3460eb7917f22b41acd3fc8116d69b8b29699b60309150bb2953",
+      "functions": [
+        {
+          "function": "createLiveGameSession",
+          "updated": "2026-09-01T09:56",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "d5c3e1783b158c6b328752e111c87a8cea24b6bd1e158756b463249b124800fa",
+          "bytes": 11116
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-01_d89e832e3213",
+      "zipSha256": "d89e832e3213c18f9abacbffdf289e5e948794acc9430b072f282264c350a484",
+      "functions": [
+        {
+          "function": "saveJourney",
+          "updated": "2026-11-01T03:20",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "publishJourney",
+          "updated": "2026-11-01T03:20",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "affb3b94824c220a9e66fda216d7039abedf1c131eab1a18b4694fc2432321a3",
+          "bytes": 11377
+        },
+        {
+          "path": "learning-journeys.emulator.json",
+          "sha256": "3845b6e9f531846aa5d2fffab63067bfe767199929980bdff2a4f914cd7c1d4a",
+          "bytes": 201
+        },
+        {
+          "path": "learning-journeys.js",
+          "sha256": "e5e0f67b6cdaa6ef8c9bb41d06ea02d631152ccae2e500108356fe6847f96077",
+          "bytes": 7476
+        },
+        {
+          "path": "learning-journeys.test.js",
+          "sha256": "adaaaf8ce70b215b646a642c579ce4913c7cd427494056ce5c1e46fde02fb82a",
+          "bytes": 13930
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        },
+        {
+          "path": "unit-library-index.js",
+          "sha256": "37c03c8c82df554dceef32b61e3ad0c7c01baab12892f3d500e0ee89e96164d4",
+          "bytes": 2915
+        },
+        {
+          "path": "unit-library-index.test.js",
+          "sha256": "3ba50533ed9430c63733890d5a9164fdfe6af5cd8d4e94b52b53a71fae559aa8",
+          "bytes": 1531
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-01_a9b40bce6534",
+      "zipSha256": "a9b40bce653419fed4e726374b17772cc40f34477fea1254299e5c5a95340d3d",
+      "functions": [
+        {
+          "function": "unpublishPublicUnit",
+          "updated": "2026-11-01T08:25",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "3221fa34447f235590211af4ea0c1e27325df761049609afd07a4d511d2a9d90",
+          "bytes": 11552
+        },
+        {
+          "path": "learning-journeys.js",
+          "sha256": "e5e0f67b6cdaa6ef8c9bb41d06ea02d631152ccae2e500108356fe6847f96077",
+          "bytes": 7476
+        },
+        {
+          "path": "learning-journeys.test.js",
+          "sha256": "c5d363ee11f5424a8ffa86cc9b5566d158dfee1dc2555646c8727b024594d549",
+          "bytes": 13940
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        },
+        {
+          "path": "public-units.js",
+          "sha256": "87e69b4e3a4b9f12c8ae1899cb0fe79fbf8ada2f75395c551e015faf4e39b23c",
+          "bytes": 9342
+        },
+        {
+          "path": "public-units.test.js",
+          "sha256": "9da1e849ae6d7365ceeba55c3dbad89e25c755234a168beea419ccd028fd0326",
+          "bytes": 12229
+        },
+        {
+          "path": "unit-library-index.js",
+          "sha256": "37c03c8c82df554dceef32b61e3ad0c7c01baab12892f3d500e0ee89e96164d4",
+          "bytes": 2915
+        },
+        {
+          "path": "unit-library-index.test.js",
+          "sha256": "3ba50533ed9430c63733890d5a9164fdfe6af5cd8d4e94b52b53a71fae559aa8",
+          "bytes": 1531
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-02_ed294fc8e73c",
+      "zipSha256": "ed294fc8e73cf7fca2bbc8a8156f5bb123d4701d1e8b15a255b0ed30b622fcf7",
+      "functions": [
+        {
+          "function": "bingoTeacherCommand",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "bingoSync",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "bingoRoundTask",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "bingoCreateRoom",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "bingoRecovery",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "bingoJoinRoom",
+          "updated": "2026-11-02T12:13",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": "adapters/firestore.mjs",
+          "sha256": "cc2c812977ec8ff58fcaf63e2ca57ccfb76a53670a2f0235ac0e4f7ce562329f",
+          "bytes": 1746
+        },
+        {
+          "path": "adapters/memory.mjs",
+          "sha256": "f7fabf0afab85b27a54656089f58bd60fd8d2e1f5026ba729fac230b72899cc6",
+          "bytes": 3191
+        },
+        {
+          "path": "adapters/tasks.mjs",
+          "sha256": "ea3b26f6a45b71844f0927d104aecbce2047f2b49c43ad7823e7677b36cafee7",
+          "bytes": 510
+        },
+        {
+          "path": "core/config.mjs",
+          "sha256": "20bc2b7bd52f46b485521a8dedaf1694e4bc12a59910d010515623edc3528da0",
+          "bytes": 1367
+        },
+        {
+          "path": "core/model.mjs",
+          "sha256": "60c794879baad419262f61dac93049424b255f10c6441bdae0c86cf9818a0baf",
+          "bytes": 5481
+        },
+        {
+          "path": "core/projections.mjs",
+          "sha256": "f0bd7f7a5939cf6acacc1cfcfe2b5a09be84398c883d56a86e5f4af5c68f759f",
+          "bytes": 1579
+        },
+        {
+          "path": "core/security.mjs",
+          "sha256": "9db8049efd337fee9e2546735055ea2f5ed154c335a4d0543c39efb0144b1313",
+          "bytes": 1828
+        },
+        {
+          "path": "core/service.mjs",
+          "sha256": "f7751bb0aff814a3227229869c73d1563fb4c47857fc7af5268ddb30d67beedb",
+          "bytes": 15470
+        },
+        {
+          "path": "core/vocabulary.mjs",
+          "sha256": "897afaa961cc45c047381d0c8b5b4b29c1cacc63d92dba82e819b12fa8f8646e",
+          "bytes": 3273
+        },
+        {
+          "path": "index.mjs",
+          "sha256": "a9058224369cd06f7e777171d8cdd4b2ab4b4efb7b3840566f6864ae417f8a5e",
+          "bytes": 4123
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "01835ff9fbfa7581f454ace4cc48da15bb1b2672f86c1ce631a9d88f14fa76a7",
+          "bytes": 131246
+        },
+        {
+          "path": "package.json",
+          "sha256": "4fa4429e969a1ab007a5358f4f41a4dd6bb4d8c092ff38ee7d65764b2be62e7a",
+          "bytes": 275
+        },
+        {
+          "path": "shared/answers.mjs",
+          "sha256": "4a5b13e16c6a1e9be345d02b8cae91a7924164dc50ac02e732a3aa106c29ea7e",
+          "bytes": 1155
+        },
+        {
+          "path": "shared/board.mjs",
+          "sha256": "7f43fb50401e90bf0460b055837c9cf9ec5b3e0fb25eb8c13021805cf77db2bd",
+          "bytes": 1725
+        },
+        {
+          "path": "shared/stars.mjs",
+          "sha256": "2a47e83c22364639f580a2503b74cfab568bcf4952872299688b59670f1f28dc",
+          "bytes": 284
+        },
+        {
+          "path": "shared/vocabulary.mjs",
+          "sha256": "231147027504887750bf8e70ab5a5139662547119c6cb24a6d6b4b7c9277b7d2",
+          "bytes": 3147
+        },
+        {
+          "path": "shared/winning.mjs",
+          "sha256": "d801c374a117d6b9aebdf769c550c1db03223151c62bc4f2ce053db2eaef2491",
+          "bytes": 1010
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-04_fe2f015c2ab6",
+      "zipSha256": "fe2f015c2ab6aee967d81aef560eba0aeba23d28309eacd2fffdd87f6e3d30ff",
+      "functions": [
+        {
+          "function": "bingoAnswer",
+          "updated": "2026-11-04T10:13",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".env.the-mandarin-room-staging",
+          "sha256": "47cc8c536c4b149639a82d3547f9034f62a50bbb5954c56bd425333a21c29786",
+          "bytes": 46
+        },
+        {
+          "path": "adapters/firestore.mjs",
+          "sha256": "d14143b140e7f120294f7062b80737cb86fae75adc17bde3f6f85f250048f8df",
+          "bytes": 2204
+        },
+        {
+          "path": "adapters/memory.mjs",
+          "sha256": "f7fabf0afab85b27a54656089f58bd60fd8d2e1f5026ba729fac230b72899cc6",
+          "bytes": 3191
+        },
+        {
+          "path": "adapters/tasks.mjs",
+          "sha256": "ea3b26f6a45b71844f0927d104aecbce2047f2b49c43ad7823e7677b36cafee7",
+          "bytes": 510
+        },
+        {
+          "path": "core/config.mjs",
+          "sha256": "20bc2b7bd52f46b485521a8dedaf1694e4bc12a59910d010515623edc3528da0",
+          "bytes": 1367
+        },
+        {
+          "path": "core/model.mjs",
+          "sha256": "60c794879baad419262f61dac93049424b255f10c6441bdae0c86cf9818a0baf",
+          "bytes": 5481
+        },
+        {
+          "path": "core/performance.mjs",
+          "sha256": "e18fcdbe0fb29f41e41805ab29e8632a7e2d65dbcccaf760f90496cb769ff1a2",
+          "bytes": 3547
+        },
+        {
+          "path": "core/projections.mjs",
+          "sha256": "f0bd7f7a5939cf6acacc1cfcfe2b5a09be84398c883d56a86e5f4af5c68f759f",
+          "bytes": 1579
+        },
+        {
+          "path": "core/security.mjs",
+          "sha256": "9db8049efd337fee9e2546735055ea2f5ed154c335a4d0543c39efb0144b1313",
+          "bytes": 1828
+        },
+        {
+          "path": "core/service.mjs",
+          "sha256": "33a6b7d5873d415978402f4ae351c6ce6aacce8c912c07f41b628970bf441bf4",
+          "bytes": 16358
+        },
+        {
+          "path": "core/vocabulary.mjs",
+          "sha256": "897afaa961cc45c047381d0c8b5b4b29c1cacc63d92dba82e819b12fa8f8646e",
+          "bytes": 3273
+        },
+        {
+          "path": "index.mjs",
+          "sha256": "de7498a39d196ea8b9c49ce747104bd3698afde3906bc6a0493cfbc0da93adac",
+          "bytes": 4521
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "01835ff9fbfa7581f454ace4cc48da15bb1b2672f86c1ce631a9d88f14fa76a7",
+          "bytes": 131246
+        },
+        {
+          "path": "package.json",
+          "sha256": "4fa4429e969a1ab007a5358f4f41a4dd6bb4d8c092ff38ee7d65764b2be62e7a",
+          "bytes": 275
+        },
+        {
+          "path": "shared/answers.mjs",
+          "sha256": "4a5b13e16c6a1e9be345d02b8cae91a7924164dc50ac02e732a3aa106c29ea7e",
+          "bytes": 1155
+        },
+        {
+          "path": "shared/board.mjs",
+          "sha256": "7f43fb50401e90bf0460b055837c9cf9ec5b3e0fb25eb8c13021805cf77db2bd",
+          "bytes": 1725
+        },
+        {
+          "path": "shared/stars.mjs",
+          "sha256": "2a47e83c22364639f580a2503b74cfab568bcf4952872299688b59670f1f28dc",
+          "bytes": 284
+        },
+        {
+          "path": "shared/vocabulary.mjs",
+          "sha256": "231147027504887750bf8e70ab5a5139662547119c6cb24a6d6b4b7c9277b7d2",
+          "bytes": 3147
+        },
+        {
+          "path": "shared/winning.mjs",
+          "sha256": "d801c374a117d6b9aebdf769c550c1db03223151c62bc4f2ce053db2eaef2491",
+          "bytes": 1010
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-07_4f3be2145d61",
+      "zipSha256": "4f3be2145d6128c1414ba423f6be4d0371f0cf1b4a8029b2e4fab9c3062de607",
+      "functions": [
+        {
+          "function": "saveUnitLibraryOrder",
+          "updated": "2026-11-07T04:24",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "readUnitLibraryOrder",
+          "updated": "2026-11-07T04:24",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "3d3fcac5dd87f6cc357094bcac417063a186aa01e9c7a5c97eb25a7e787ec24c",
+          "bytes": 11794
+        },
+        {
+          "path": "learning-journeys.js",
+          "sha256": "e5e0f67b6cdaa6ef8c9bb41d06ea02d631152ccae2e500108356fe6847f96077",
+          "bytes": 7476
+        },
+        {
+          "path": "learning-journeys.test.js",
+          "sha256": "c5d363ee11f5424a8ffa86cc9b5566d158dfee1dc2555646c8727b024594d549",
+          "bytes": 13940
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        },
+        {
+          "path": "public-units.js",
+          "sha256": "87e69b4e3a4b9f12c8ae1899cb0fe79fbf8ada2f75395c551e015faf4e39b23c",
+          "bytes": 9342
+        },
+        {
+          "path": "public-units.test.js",
+          "sha256": "9da1e849ae6d7365ceeba55c3dbad89e25c755234a168beea419ccd028fd0326",
+          "bytes": 12229
+        },
+        {
+          "path": "unit-library-index.js",
+          "sha256": "37c03c8c82df554dceef32b61e3ad0c7c01baab12892f3d500e0ee89e96164d4",
+          "bytes": 2915
+        },
+        {
+          "path": "unit-library-index.test.js",
+          "sha256": "3ba50533ed9430c63733890d5a9164fdfe6af5cd8d4e94b52b53a71fae559aa8",
+          "bytes": 1531
+        },
+        {
+          "path": "unit-ordering.emulator.test.js",
+          "sha256": "b94864fdac770b64b40ccc71c6c868e3bb915ef6df376b22bd4f59b66317702a",
+          "bytes": 2280
+        },
+        {
+          "path": "unit-ordering.js",
+          "sha256": "92649b789cf04ade0b060cdff065a7d2f559fae92946289685f9a2d343ee1754",
+          "bytes": 3633
+        },
+        {
+          "path": "unit-ordering.test.js",
+          "sha256": "62bdcf73d729eb630be356bb11258fc4dcad9e38846374dffbe850e7f3fd2a41",
+          "bytes": 2148
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-15_ec2852d66f63",
+      "zipSha256": "ec2852d66f633090d38f70c3ac64fc3068be66086c1f9c3c187665d25f699eb0",
+      "functions": [
+        {
+          "function": "listPublicFeedback",
+          "updated": "2026-11-15T09:29",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "moderateFeedback",
+          "updated": "2026-11-15T09:29",
+          "runtime": "nodejs22"
+        },
+        {
+          "function": "submitFeedback",
+          "updated": "2026-11-15T09:29",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "feedback.emulator.test.js",
+          "sha256": "a5f2f40b47f077fb3f243d2393121a80dee85b57b2339c18f84912940ad53d9c",
+          "bytes": 7363
+        },
+        {
+          "path": "feedback.js",
+          "sha256": "3b86c458c3b7f7918ecf762a09ea98235b654121d25d8af74b1acc53361f0781",
+          "bytes": 8594
+        },
+        {
+          "path": "index.js",
+          "sha256": "e3400958395a116f3637c420a2b9dda33233ecf9fc20a43dcfd3b07d1748d800",
+          "bytes": 11863
+        },
+        {
+          "path": "learning-journeys.js",
+          "sha256": "e5e0f67b6cdaa6ef8c9bb41d06ea02d631152ccae2e500108356fe6847f96077",
+          "bytes": 7476
+        },
+        {
+          "path": "learning-journeys.test.js",
+          "sha256": "c5d363ee11f5424a8ffa86cc9b5566d158dfee1dc2555646c8727b024594d549",
+          "bytes": 13940
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        },
+        {
+          "path": "public-units.js",
+          "sha256": "87e69b4e3a4b9f12c8ae1899cb0fe79fbf8ada2f75395c551e015faf4e39b23c",
+          "bytes": 9342
+        },
+        {
+          "path": "public-units.test.js",
+          "sha256": "9da1e849ae6d7365ceeba55c3dbad89e25c755234a168beea419ccd028fd0326",
+          "bytes": 12229
+        },
+        {
+          "path": "unit-library-index.js",
+          "sha256": "37c03c8c82df554dceef32b61e3ad0c7c01baab12892f3d500e0ee89e96164d4",
+          "bytes": 2915
+        },
+        {
+          "path": "unit-library-index.test.js",
+          "sha256": "3ba50533ed9430c63733890d5a9164fdfe6af5cd8d4e94b52b53a71fae559aa8",
+          "bytes": 1531
+        },
+        {
+          "path": "unit-ordering.emulator.test.js",
+          "sha256": "b94864fdac770b64b40ccc71c6c868e3bb915ef6df376b22bd4f59b66317702a",
+          "bytes": 2280
+        },
+        {
+          "path": "unit-ordering.js",
+          "sha256": "92649b789cf04ade0b060cdff065a7d2f559fae92946289685f9a2d343ee1754",
+          "bytes": 3633
+        },
+        {
+          "path": "unit-ordering.test.js",
+          "sha256": "17590d842b9e938d9bd7c555fd921f83a6a968df22e924b394bbf49277acd131",
+          "bytes": 3035
+        }
+      ]
+    },
+    {
+      "folder": "2026-11-25_f3fa5b8ed7b7",
+      "zipSha256": "f3fa5b8ed7b7ab85455fb37e29d7f1443cccb514996f68b146bc62b32ab7cb74",
+      "functions": [
+        {
+          "function": "publishPublicUnit",
+          "updated": "2026-11-25T06:24",
+          "runtime": "nodejs22"
+        }
+      ],
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "32aab7889babab433487cf165b2c692488a5c4db094daf31949622c8c6191222",
+          "bytes": 20
+        },
+        {
+          "path": "index.js",
+          "sha256": "3221fa34447f235590211af4ea0c1e27325df761049609afd07a4d511d2a9d90",
+          "bytes": 11552
+        },
+        {
+          "path": "learning-journeys.js",
+          "sha256": "e5e0f67b6cdaa6ef8c9bb41d06ea02d631152ccae2e500108356fe6847f96077",
+          "bytes": 7476
+        },
+        {
+          "path": "live-game-sessions.js",
+          "sha256": "5ad5cdf466e55eb2419b68dd74cb0a3130651fbeb358de24c333bbf2af6eb2dd",
+          "bytes": 26187
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5936ce82263699bf6688fa46ef275e1bc695acab3becc5fb39f519a0bbe54e28",
+          "bytes": 131250
+        },
+        {
+          "path": "package.json",
+          "sha256": "80ade12fa79f7f205a7f009dbc4079155a9746c757271e17cc71904475dad52e",
+          "bytes": 261
+        },
+        {
+          "path": "public-units.js",
+          "sha256": "e32b2c1efd04efcf6c440e2842206550206b165cad43bc8107bec4832c1098ce",
+          "bytes": 9890
+        },
+        {
+          "path": "unit-library-index.js",
+          "sha256": "37c03c8c82df554dceef32b61e3ad0c7c01baab12892f3d500e0ee89e96164d4",
+          "bytes": 2915
+        }
+      ]
+    }
+  ]
+}
