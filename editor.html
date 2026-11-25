@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#ffffff"><title>Edit Set · Vocabulary Library</title><link rel="icon" href="assets/brand/emblem-header.png" type="image/png"><link rel="stylesheet" href="css/styles.css?v=topics-1"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#ffffff"><title>Edit Set · Vocabulary Library</title><link rel="icon" href="assets/brand/emblem-header.png" type="image/png"><link rel="stylesheet" href="css/styles.css?v=topics-3"></head>
 <body><header class="site-header editor-site-header tmr-unified-header"><div class="tmr-brand"><a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="assets/brand/emblem-header.png" width="56" height="53" alt=""></a><span class="tmr-brand-text"><a class="tmr-home-link" href="https://themandarinroom.au/">The Mandarin Room</a><a class="tmr-app-link" href="https://themandarinroom.au/#/vocabulary">Vocabulary Library</a></span></div><section class="voice-auth-panel"><div><strong id="voice-auth-state">Connecting Teacher Voice Cloud…</strong><p>Only authorised teachers can upload or delete recordings.</p></div><div><button id="voice-sign-in" class="button secondary" type="button">Sign in with Google</button><button id="voice-sign-out" class="button secondary" type="button" hidden>Sign out</button></div></section></header>
 <main class="editor-main"><a class="quiet-link" href="./">← Vocabulary Library</a><form id="set-form">
   <div class="editor-heading"><div><p class="eyebrow">Teacher authoring</p><h1 id="editor-title">New vocabulary set</h1></div><div class="editor-actions"><button class="button primary" type="submit">Save set</button><button id="delete-set" class="button danger" type="button" hidden>Delete set</button></div></div>
   <p id="form-status" class="form-status" role="status"></p>
   <section class="form-panel set-details-panel"><h2>Set details</h2><div class="form-grid set-details-grid">
     <label>Year level<select id="year-level" required><option value="0">Prep</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select></label>
-    <label for="topic">Topic *<select id="topic" required aria-describedby="topic-note"><option value="">Choose a topic…</option></select><small id="topic-note">Groups this set on the website's Topics page.</small></label>
     <label>English title<input id="title" required></label>
     <label>Chinese title<input id="chinese-title" lang="zh-Hans"></label>
+    <fieldset id="topics" class="topic-choices" aria-describedby="topic-note"><legend>Topics *</legend><small id="topic-note">Choose one or more. The set appears on each chosen topic's page on the website.</small></fieldset>
   </div><details class="optional-editor set-details-advanced"><summary>Advanced</summary><div class="optional-editor-body"><label>Stable ID<input id="set-id" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="year5-countries"><small>Generated automatically for new sets. Existing IDs remain unchanged.</small></label>
   </div></details></section>
   <section class="form-panel set-cover-panel set-cover-editor" aria-labelledby="set-cover-title"><div class="set-cover-heading"><h2 id="set-cover-title">Vocabulary Set Cover</h2><small>Upload an image from this device, paste an image URL, or generate a representative cover from the set's title and vocabulary items.</small></div>
@@ -24,4 +24,4 @@
     <div id="items" class="item-editor-list"></div>
     <button id="add-item" class="button secondary compact-add-item" type="button">+ Add item</button>
   </section>
-</form></main><footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Vocabulary v0.4.2 · Aug 2026</span></footer><script type="module" src="js/editor.js?v=topics-2"></script></body></html>
+</form></main><footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Vocabulary v0.4.2 · Aug 2026</span></footer><script type="module" src="js/editor.js?v=topics-3"></script></body></html>

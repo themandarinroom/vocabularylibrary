@@ -24,7 +24,8 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
   title: "Countries",
   chineseTitle: "国家",
   description: "...",
-  topicId: "countries", // stable ID from js/topic-taxonomy.js; see "Topics" below
+  topicIds: ["countries"], // one or more stable IDs from js/topic-taxonomy.js; see "Topics" below
+  topicId: "countries",    // mirror of topicIds[0] for older readers
   items: [/* vocabulary items */]
 }
 ```
@@ -33,13 +34,13 @@ Seed sets live in `js/vocabulary-data.js`, separate from the interface. Publishe
 
 ## Topics
 
-Every vocabulary set belongs to exactly one topic through `topicId`. The website's Topics page (themandarinroom.au/#/topics) reads it from the published sets on each page load, so publishing, moving, renaming, re-levelling, deleting or republishing a set shows up after a normal refresh. No website change, mapping file or redeployment is involved.
+Every vocabulary set belongs to one or more topics through `topicIds` (stable IDs; `topicId` mirrors the first for older readers). A set appears on every chosen topic's page; it is still one set with one ID, so it is listed once everywhere else. The website's Topics page (themandarinroom.au/#/topics) reads it from the published sets on each page load, so publishing, moving, renaming, re-levelling, deleting or republishing a set shows up after a normal refresh. No website change, mapping file or redeployment is involved.
 
 - **Canonical taxonomy:** `js/topic-taxonomy.js` holds the 13 approved topics (v1.1): `numbers`, `colours`, `people`, `animals`, `social-interactions`, `food-drinks`, `school`, `free-time`, `countries`, `time-weather`, `culture`, `nature` and `community`. Greetings was replaced by Social Interactions on 25 November 2026. `firestore.rules` (`validTopicId`) and the website's `dist/catalog.mjs` keep checked copies of the same list.
-- **Editor:** the **Topic \*** field sits beside Year level and stores the topic ID, never the label. Saving is refused until a valid topic is chosen. A set without one shows "Unassigned".
+- **Editor:** the **Topics \*** checkboxes (all 13 topics) sit under Year level and the titles, and store topic IDs, never labels. Saving is refused until at least one topic is chosen. A set without any shows "Unassigned". Unticking one topic leaves the others.
 - **Rules:**
-  - Only authorised teachers can write `topicId`, and it must be one of the 13 IDs.
-  - An edit may change a set's topic but can never drop it. This stops an old, cached editor from erasing it.
+  - Only authorised teachers can write `topicId`/`topicIds`; every ID must be one of the 13, `topicIds` has no duplicates, and `topicId` must be one of `topicIds`.
+  - An edit may change a set's topics but can never drop them, and once a set has `topicIds` every edit must carry them. This stops an old, cached editor (which only knows `topicId`) from erasing extra topics.
 - **Topic illustrations:** these belong to the website and never change when sets are added. Each set's own cover is still used on its card.
 - **Changing the taxonomy:** adding, renaming or removing a topic is a separate, approved change to all three lists. Never create a topic automatically, and never infer one from a set's title.
 - **Creating sets:** for manual, AI-assisted, script or import creation, follow [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md).

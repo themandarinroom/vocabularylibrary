@@ -1,6 +1,6 @@
 // Pure planning and verification logic for the topicId migration (no network, no Firebase).
 // Documents are Firestore REST documents: { name, updateTime, fields }.
-import { isValidTopicId } from "../../js/topic-taxonomy.js";
+import { isValidTopicId, normaliseTopicIds, setTopicIds } from "../../js/topic-taxonomy.js";
 
 export const docId = (doc) => doc.name.split("/").pop();
 const str = (field) => (field && "stringValue" in field ? field.stringValue : undefined);
@@ -72,33 +72,87 @@ export function planRollback(backupDocs, currentDocs, assignments) {
   });
 }
 
-// v1.1: sets whose topicId is a retired ID (e.g. greetings) move to its replacement (social-interactions).
-// Every other set is untouched. The result has the same shape as planMigration, so verifyMigration applies.
+// ---- Multi-topic (v1.1) ---------------------------------------------------------------------------------
+// Every write below sets both fields together: topicIds (all topics, taxonomy order) and topicId (mirror of the
+// first, for older readers). `next` holds the target values; null means the field is removed.
+const arr = (field) => (field && "arrayValue" in field ? (field.arrayValue.values || []).map(str) : undefined);
+const topicsOf = (doc) => setTopicIds({ topicId: str(doc.fields?.topicId), topicIds: arr(doc.fields?.topicIds) });
+const nextFor = (topicIds) => (topicIds.length ? { topicIds, topicId: topicIds[0] } : { topicIds: null, topicId: null });
+const sameTopics = (doc, next) => JSON.stringify(arr(doc.fields?.topicIds) ?? null) === JSON.stringify(next.topicIds) && (str(doc.fields?.topicId) ?? null) === next.topicId;
+
+// Sets on a retired ID (e.g. greetings) move to its replacement (social-interactions), in topicId and topicIds.
 export function planRetiredRename(docs, legacyMap) {
   const actions = docs.map((doc) => {
     const id = docId(doc);
-    const current = str(doc.fields?.topicId);
-    if (isTombstone(doc)) return { id, action: "tombstone", current };
-    const target = legacyMap[current];
-    if (current !== undefined && target) {
-      if (!isValidTopicId(target)) throw new Error(`Legacy map points ${current} at invalid ${target}`);
-      return { id, action: "assign", current, target, updateTime: doc.updateTime, name: doc.name };
-    }
-    return { id, action: "keep", current };
+    if (isTombstone(doc)) return { id, action: "tombstone" };
+    const rawIds = arr(doc.fields?.topicIds) ?? [];
+    const rawId = str(doc.fields?.topicId);
+    if (!rawIds.some((t) => legacyMap[t]) && !legacyMap[rawId]) return { id, action: "keep", current: rawId };
+    for (const target of Object.values(legacyMap)) if (!isValidTopicId(target)) throw new Error(`Legacy map points at invalid ${target}`);
+    const hadArray = arr(doc.fields?.topicIds) !== undefined;
+    const mapped = normaliseTopicIds((hadArray ? rawIds : [rawId]).map((t) => legacyMap[t] || t));
+    const next = hadArray ? nextFor(mapped) : { topicIds: null, topicId: mapped[0] ?? null };
+    return { id, action: "write", current: rawId, target: next.topicId, next, name: doc.name, updateTime: doc.updateTime };
   });
   return { actions, missing: [] };
 }
 
-// Undo planRetiredRename: put the retired ID back only where the set still carries the replacement it was given.
-export function planRetiredRenameRollback(backupDocs, currentDocs, legacyMap) {
-  const backup = new Map(backupDocs.map((doc) => [docId(doc), doc]));
-  return currentDocs.flatMap((doc) => {
+// Give every set that has only the single topicId the matching topicIds array. Nothing else changes.
+export function planTopicIdsBackfill(docs) {
+  return { missing: [], actions: docs.map((doc) => {
     const id = docId(doc);
-    const before = backup.get(id);
-    const was = str(before?.fields?.topicId);
-    const now = str(doc.fields?.topicId);
-    if (!before || isTombstone(before) || !was || !legacyMap[was]) return []; // the rename never touches tombstones
-    if (now !== legacyMap[was]) return [{ id, action: "keep-changed", current: now }];
-    return [{ id, action: "restore", value: was, name: doc.name, updateTime: doc.updateTime }];
+    if (isTombstone(doc)) return { id, action: "tombstone" };
+    if (arr(doc.fields?.topicIds) !== undefined) return { id, action: "already", current: str(doc.fields?.topicId) };
+    const topics = topicsOf(doc);
+    if (!topics.length) return { id, action: "unassigned" };
+    return { id, action: "write", current: topics[0], target: topics[0], next: nextFor(topics), name: doc.name, updateTime: doc.updateTime };
+  }) };
+}
+
+// Explicit, owner-approved topic lists, e.g. { "year3-age": ["people", "numbers"] }. Unknown sets or topics stop the plan.
+export function planExplicitTopics(docs, wanted) {
+  const byId = new Map(docs.map((doc) => [docId(doc), doc]));
+  for (const [id, topics] of Object.entries(wanted)) {
+    if (!byId.has(id)) throw new Error(`Set not found: ${id}`);
+    if (isTombstone(byId.get(id))) throw new Error(`Set is deleted: ${id}`);
+    if (!topics.length || topics.some((t) => !isValidTopicId(t))) throw new Error(`Invalid topics for ${id}: ${topics.join(",")}`);
+  }
+  return { missing: [], actions: docs.map((doc) => {
+    const id = docId(doc);
+    if (!wanted[id]) return { id, action: "keep" };
+    const next = nextFor(normaliseTopicIds(wanted[id]));
+    if (sameTopics(doc, next)) return { id, action: "already", current: next.topicIds.join(",") };
+    return { id, action: "write", current: topicsOf(doc).join(","), target: next.topicIds.join(","), next, name: doc.name, updateTime: doc.updateTime };
+  }) };
+}
+
+// After a topic write: nothing added or lost, every field other than topicId/topicIds byte-identical, written sets
+// carry exactly `next`, untouched sets keep their topic fields.
+export function verifyTopicFields(beforeDocs, afterDocs, plan) {
+  const failures = [];
+  const after = new Map(afterDocs.map((doc) => [docId(doc), doc]));
+  const strip = (fields = {}) => { const copy = { ...fields }; delete copy.topicId; delete copy.topicIds; return copy; };
+  if (afterDocs.length !== beforeDocs.length) failures.push(`document count changed: ${beforeDocs.length} -> ${afterDocs.length}`);
+  for (const before of beforeDocs) {
+    const id = docId(before); const now = after.get(id);
+    if (!now) { failures.push(`${id}: missing after migration`); continue; }
+    if (stable(strip(before.fields)) !== stable(strip(now.fields))) failures.push(`${id}: fields other than topicId/topicIds changed`);
+    const step = plan.actions.find((entry) => entry.id === id);
+    if (step?.action === "write") { if (!sameTopics(now, step.next)) failures.push(`${id}: topics are not ${JSON.stringify(step.next)}`); }
+    else if (stable({ a: before.fields?.topicId, b: before.fields?.topicIds }) !== stable({ a: now.fields?.topicId, b: now.fields?.topicIds })) failures.push(`${id}: topics changed unexpectedly`);
+  }
+  return failures;
+}
+
+// Undo a saved plan: restore the backup's topicId/topicIds only where the set still carries what the plan wrote.
+export function planTopicFieldsRollback(backupDocs, currentDocs, plan) {
+  const backup = new Map(backupDocs.map((doc) => [docId(doc), doc]));
+  const current = new Map(currentDocs.map((doc) => [docId(doc), doc]));
+  return plan.actions.filter((step) => step.action === "write").map((step) => {
+    const now = current.get(step.id); const before = backup.get(step.id);
+    if (!now || !before) return { id: step.id, action: "missing" };
+    if (!sameTopics(now, step.next)) return { id: step.id, action: "keep-changed" };
+    return { id: step.id, action: "restore", name: now.name, updateTime: now.updateTime,
+      next: { topicIds: arr(before.fields?.topicIds) ?? null, topicId: str(before.fields?.topicId) ?? null } };
   });
 }

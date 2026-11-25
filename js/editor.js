@@ -1,5 +1,5 @@
-import { getSet, getSetsStrict, saveSet, deleteSet, TOPIC_REQUIRED_MESSAGE } from "./vocabulary-store.js?v=topics-2";
-import { TOPIC_TAXONOMY, isValidTopicId } from "./topic-taxonomy.js?v=topics-2";
+import { getSet, getSetsStrict, saveSet, deleteSet, TOPIC_REQUIRED_MESSAGE } from "./vocabulary-store.js?v=topics-3";
+import { TOPIC_TAXONOMY, normaliseTopicIds, setTopicIds } from "./topic-taxonomy.js?v=topics-3";
 import { bindTeacherVoiceControls, initialiseTeacherVoiceAuth } from "./teacher-voice-ui.js?v=duplicate-sets-1";
 import { deleteGeneratedVocabularyImage, generateVocabularyImage, generateVocabularySetCover, uploadApprovedVocabularyImage } from "./vocabulary-image-cloud.js?v=image-upload-1";
 import { imageFieldMarkup, setImageFieldStatus, wireImageField } from "./vocabulary-image-field.js?v=image-upload-1";
@@ -31,27 +31,30 @@ let savingSet = false;
 let preparingImages = 0;
 const preservedDescription = draftSource?.description || "";
 const $ = (selector) => document.querySelector(selector);
-// Topic field: options come only from the canonical taxonomy; the stored value is the stable topic ID.
-$("#topic").insertAdjacentHTML("beforeend", TOPIC_TAXONOMY.map((topic) => `<option value="${topic.id}">${topic.titleEn} · ${topic.titleZh}</option>`).join(""));
-function showTopic(topicId, { legacy = false } = {}) {
-  $("#topic").value = isValidTopicId(topicId) ? topicId : "";
+// Topics field: one checkbox per canonical topic; a set may belong to several. Stored as stable IDs (topicIds).
+$("#topics").insertAdjacentHTML("beforeend", TOPIC_TAXONOMY.map((topic) => `<label class="topic-choice"><input type="checkbox" name="topic" value="${topic.id}"><span>${topic.titleEn} · <span lang="zh-Hans">${topic.titleZh}</span></span></label>`).join(""));
+const topicBoxes = () => [...document.querySelectorAll('#topics input[name="topic"]')];
+const chosenTopicIds = () => normaliseTopicIds(topicBoxes().filter((box) => box.checked).map((box) => box.value));
+function showTopics(set, { legacy = false } = {}) {
+  const chosen = new Set(setTopicIds(set));
+  topicBoxes().forEach((box) => { box.checked = chosen.has(box.value); });
   const note = $("#topic-note");
-  const unassigned = legacy && !isValidTopicId(topicId);
+  const unassigned = legacy && !chosen.size;
   note.classList.toggle("topic-unassigned", unassigned);
-  note.textContent = unassigned ? "Unassigned. Choose a topic before saving." : "Groups this set on the website's Topics page.";
+  note.textContent = unassigned ? "Unassigned. Choose at least one topic before saving." : "Choose one or more. The set appears on each chosen topic's page on the website.";
 }
-// Returns true when a valid topic is selected; otherwise shows the message where the teacher is looking.
+// Returns true when at least one valid topic is chosen; otherwise shows the message where the teacher is looking.
 function requireTopic(statusElement = $("#form-status")) {
-  if (isValidTopicId($("#topic").value)) return true;
+  if (chosenTopicIds().length) return true;
   statusElement.textContent = TOPIC_REQUIRED_MESSAGE;
-  $("#topic").focus();
+  topicBoxes()[0]?.focus();
   return false;
 }
 const slug = (value) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `item-${Date.now()}`;
 const newItem = (chinese = "", pinyin = "", english = "") => ({ id: `${slug(english || pinyin || "item")}-${Date.now().toString(36)}`, chinese, pinyin, english, image: null, imageType: "auto", imageGenerationNote: "", notes: "", type: "word", audio: { aiEnabled: true }, handwriting: { enabled: false, characters: Array.from(chinese.replace(/[\s？。！?!.]/g, "")) } });
 const generatedSetId = () => `${Number($("#year-level").value) === 0 ? "prep" : `year${$("#year-level").value}`}-${slug($("#title").value)}`.replace(/-+$/, "");
 const bindGeneratedSetId = () => { $("#year-level").addEventListener("change", () => { $("#set-id").value = generatedSetId(); }); $("#title").addEventListener("input", () => { $("#set-id").value = generatedSetId(); }); };
-if (existing) { $("#editor-title").textContent = `Edit ${existing.title}`; $("#year-level").value = existing.yearLevel; $("#set-id").value = existing.id; $("#set-id").readOnly = true; $("#title").value = existing.title; $("#chinese-title").value = existing.chineseTitle; showTopic(existing.topicId, { legacy: true }); $("#delete-set").hidden = false; }
+if (existing) { $("#editor-title").textContent = `Edit ${existing.title}`; $("#year-level").value = existing.yearLevel; $("#set-id").value = existing.id; $("#set-id").readOnly = true; $("#title").value = existing.title; $("#chinese-title").value = existing.chineseTitle; showTopics(existing, { legacy: true }); $("#delete-set").hidden = false; }
 else if (duplicateSource) {
   const duplicateStamp = Date.now().toString(36);
   items = items.map((item, index) => {
@@ -64,12 +67,12 @@ else if (duplicateSource) {
   $("#year-level").value = duplicateSource.yearLevel;
   $("#title").value = `${duplicateSource.title} Copy`;
   $("#chinese-title").value = duplicateSource.chineseTitle || "";
-  showTopic(duplicateSource.topicId);
+  showTopics(duplicateSource);
   $("#set-id").value = generatedSetId();
   bindGeneratedSetId();
   $("#form-status").textContent = `Duplicated from “${duplicateSource.title}”. Review the new title and items, then save as a new set. Teacher Voice recordings are not copied.`;
 }
-else { $("#year-level").value = 1; showTopic(""); items.push(newItem()); $("#set-id").value = generatedSetId(); bindGeneratedSetId(); }
+else { $("#year-level").value = 1; showTopics(null); items.push(newItem()); $("#set-id").value = generatedSetId(); bindGeneratedSetId(); }
 $("#set-cover-url").value = coverImage || "";
 
 function trackPreparing(busy) { preparingImages = Math.max(0, preparingImages + (busy ? 1 : -1)); }
@@ -112,7 +115,7 @@ function updateFromRow(row) { const item = items[Number(row.dataset.index)]; row
 function wireItem(row) { row.querySelectorAll("[data-field]").forEach((input) => input.addEventListener("input", () => updateFromRow(row))); row.querySelector('[data-field="image"]').addEventListener("input", () => { const item = items[Number(row.dataset.index)]; if (pendingImages.has(item.id)) { discardPendingImage(item.id); renderItemImageField(row); } }); row.querySelector(".remove-item").onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); discardPendingImage(item.id); items.splice(Number(row.dataset.index), 1); renderItems(); renderImageReview(); }; row.querySelector(".move-up").onclick = () => move(Number(row.dataset.index), -1); row.querySelector(".move-down").onclick = () => move(Number(row.dataset.index), 1); row.querySelector(".suggest").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; const match = suggestions[item.chinese.trim()]; if (match) { if (!item.pinyin) item.pinyin = match[0]; if (!item.english) item.english = match[1]; $("#form-status").textContent = "Suggestions added. Review and edit before saving."; renderItems(); } else $("#form-status").textContent = "No local suggestion found. Enter Pinyin and English manually."; }; row.querySelector(".find-image").onclick = () => { updateFromRow(row); const item = items[Number(row.dataset.index)]; requestImageCandidate(item, Boolean(item.image)); }; const useSetCover = row.querySelector(".use-set-cover"); if (useSetCover) useSetCover.onclick = () => { const item = items[Number(row.dataset.index)]; discardCandidate(item.id); discardPendingImage(item.id); item.image = coverImage; item.imageType = "group"; item.imageSource = "set-cover"; delete item.imageStoragePath; delete item.imageGenerated; $("#form-status").textContent = `${item.chinese || item.english} now uses the Set Cover. Save the set to publish this change.`; renderItems(); renderImageReview(); }; }
 function move(index, change) { const target = index + change; if (target < 0 || target >= items.length) return; [items[index], items[target]] = [items[target], items[index]]; renderItems(); }
 function updateAllRows() { document.querySelectorAll(".item-editor").forEach(updateFromRow); }
-function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), topicId: $("#topic").value, description: preservedDescription, coverImage, coverImageStoragePath, coverImageGenerated, items }; }
+function buildSet() { return { id: $("#set-id").value.trim(), yearLevel: Number($("#year-level").value), title: $("#title").value.trim(), chineseTitle: $("#chinese-title").value.trim(), topicIds: chosenTopicIds(), description: preservedDescription, coverImage, coverImageStoragePath, coverImageGenerated, items }; }
 async function deleteGeneratedImageIfUnreferenced(storagePath, imageUrl, currentSetId) {
   if (!storagePath || !imageUrl) return;
   try {

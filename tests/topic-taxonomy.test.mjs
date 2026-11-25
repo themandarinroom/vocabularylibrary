@@ -2,9 +2,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { TOPIC_TAXONOMY, TOPIC_IDS, LEGACY_TOPIC_IDS, isValidTopicId, resolveTopic } from "../js/topic-taxonomy.js";
+import { TOPIC_TAXONOMY, TOPIC_IDS, LEGACY_TOPIC_IDS, isValidTopicId, resolveTopic, normaliseTopicIds, setTopicIds } from "../js/topic-taxonomy.js";
 import { publicVocabularySet, saveSet, TOPIC_REQUIRED_MESSAGE } from "../js/vocabulary-store.js";
-import { planMigration, verifyMigration, planRollback, planRetiredRename, planRetiredRenameRollback } from "../scripts/migrations/topic-migration-core.mjs";
+import { planMigration, verifyMigration, planRollback, planRetiredRename, planTopicIdsBackfill, planExplicitTopics, verifyTopicFields, planTopicFieldsRollback } from "../scripts/migrations/topic-migration-core.mjs";
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -44,29 +44,37 @@ test("Firestore rules list exactly the canonical topic IDs", () => {
   const list = rules.match(/function validTopicId\(value\) \{ return value is string && value in \[([^\]]+)\]/);
   assert(list, "validTopicId() not found in firestore.rules");
   assert.deepEqual(list[1].split(",").map((s) => s.trim().replace(/'/g, "")), TOPIC_IDS);
-  assert.match(rules, /'coverImageGenerated', 'topicId', 'items'/);
-  assert.match(rules, /!resource\.data\.keys\(\)\.hasAny\(\['topicId'\]\) \|\| request\.resource\.data\.keys\(\)\.hasAny\(\['topicId'\]\)/, "updates must not drop an existing topicId");
+  assert.match(rules, /'coverImageGenerated', 'topicId', 'topicIds', 'items'/);
+  assert.match(rules, /function validTopicIds\(value\) \{ return value is list && value\.size\(\) <= 13 && value\.hasOnly\(\[([^\]]+)\]\)/);
+  assert.deepEqual(rules.match(/value\.hasOnly\(\[([^\]]+)\]\)/)[1].split(",").map((x) => x.trim().replace(/'/g, "")), TOPIC_IDS);
+  assert(rules.includes("(!resource.data.keys().hasAny(['topicId', 'topicIds']) || request.resource.data.keys().hasAny(['topicIds']) || (!resource.data.keys().hasAny(['topicIds']) && request.resource.data.keys().hasAny(['topicId'])))"), "updates must not drop existing topics");
+  assert(rules.includes("(!data.keys().hasAll(['topicId', 'topicIds']) || data.topicIds.hasAny([data.topicId]))"), "topicId must be one of topicIds");
 });
 
-test("the store keeps a valid topicId, drops an invalid one and refuses to save without one", async () => {
+test("the store keeps topicIds (and the topicId mirror), reads legacy topicId, and refuses to save without a topic", async () => {
   const base = { id: "year5-hobbies-i", yearLevel: 5, title: "Hobbies I", items: [] };
-  assert.equal(publicVocabularySet({ ...base, topicId: "free-time" }).topicId, "free-time");
-  assert.equal("topicId" in publicVocabularySet(base), false, "legacy sets stay unassigned");
+  assert.deepEqual(publicVocabularySet({ ...base, topicId: "free-time" }).topicIds, ["free-time"], "legacy single topic is read as a one-item list");
+  const multi = publicVocabularySet({ ...base, topicIds: ["people", "numbers", "people", "sports"] });
+  assert.deepEqual(multi.topicIds, ["numbers", "people"], "deduplicated, canonical order, invalid IDs dropped");
+  assert.equal(multi.topicId, "numbers", "topicId mirrors the first topic for older readers");
+  assert.deepEqual(publicVocabularySet({ ...base, topicIds: ["people"], topicId: "animals" }).topicIds, ["people"], "topicIds wins over a stale topicId");
+  assert.equal("topicIds" in publicVocabularySet(base), false, "legacy sets stay unassigned");
   assert.equal("topicId" in publicVocabularySet({ ...base, topicId: "sports" }), false);
-  for (const topicId of [undefined, "", "Free Time", "sports"]) await assert.rejects(saveSet({ ...base, topicId }), { message: TOPIC_REQUIRED_MESSAGE });
+  for (const topicIds of [undefined, [], ["sports"], ["people", "people"], ["Free Time"], "people"]) await assert.rejects(saveSet({ ...base, topicIds }), { message: TOPIC_REQUIRED_MESSAGE });
 });
 
-test("the editor offers the taxonomy beside Year level, stores the ID and requires it before every save path", () => {
+test("the editor offers the 13 topics as checkboxes, stores their IDs as topicIds and requires one before every save path", () => {
   const html = read("editor.html");
   const js = read("js/editor.js");
-  assert.match(html, /<label>Year level<select id="year-level"[^]*?<\/label>\s*<label for="topic">Topic \*<select id="topic" required[^>]*><option value="">Choose a topic…<\/option><\/select>/);
-  assert.match(js, /TOPIC_TAXONOMY\.map\(\(topic\) => `<option value="\$\{topic\.id\}">/);
-  assert.match(js, /topicId: \$\("#topic"\)\.value/);
-  assert.match(js, /showTopic\(existing\.topicId, \{ legacy: true \}\)/);
-  assert.match(js, /showTopic\(duplicateSource\.topicId\)/);
+  assert.match(html, /<label>Year level<select id="year-level"[^]*?<fieldset id="topics" class="topic-choices"[^>]*><legend>Topics \*<\/legend>/);
+  assert.doesNotMatch(html, /<select id="topic"/, "the single-topic dropdown is gone");
+  assert.match(js, /TOPIC_TAXONOMY\.map\(\(topic\) => `<label class="topic-choice"><input type="checkbox" name="topic" value="\$\{topic\.id\}">/);
+  assert.match(js, /topicIds: chosenTopicIds\(\)/);
+  assert.match(js, /showTopics\(existing, \{ legacy: true \}\)/);
+  assert.match(js, /showTopics\(duplicateSource\)/);
   assert.equal((js.match(/requireTopic\(/g) || []).length, 4, "definition + set save + cover accept + approved images");
-  assert.doesNotMatch(js, /topicId: "(numbers|colours|people|animals)"/, "no silent default topic");
-  assert.match(html, /js\/editor\.js\?v=topics-2/);
+  assert.doesNotMatch(js, /checked = true/, "no silent default topic");
+  assert.match(html, /js\/editor\.js\?v=topics-3/);
 });
 
 test("the editor does not touch audio playback", () => {
@@ -117,13 +125,39 @@ test("rollback removes only the topicIds the migration added", () => {
   assert.deepEqual(planRollback(backup, current, assignments).map((s) => [s.id, s.action]), [["year1-pets", "remove"], ["year3-age", "keep-changed"]]);
 });
 
-test("v1.1 rename: only sets on a retired ID move, to its replacement; others are untouched", () => {
-  const docs = [doc("year2-greetings", { topicId: { stringValue: "greetings" } }), doc("year1-pets", { topicId: { stringValue: "animals" } }), doc("year1-legacy", {}), doc("year2-gone", { deleted: { booleanValue: true }, topicId: { stringValue: "greetings" } })];
+test("v1.1 rename: sets on a retired ID move to its replacement in topicId and topicIds; others are untouched", () => {
+  const docs = [doc("year2-how-are-you", { topicId: { stringValue: "greetings" } }), doc("year2-multi", { topicId: { stringValue: "greetings" }, topicIds: { arrayValue: { values: [{ stringValue: "greetings" }, { stringValue: "people" }] } } }), doc("year1-pets", { topicId: { stringValue: "animals" } }), doc("year1-legacy", {}), doc("year2-gone", { deleted: { booleanValue: true }, topicId: { stringValue: "greetings" } })];
   const plan = planRetiredRename(docs, LEGACY_TOPIC_IDS);
-  assert.deepEqual(plan.actions.map((a) => [a.id, a.action, a.target ?? null]), [["year2-greetings", "assign", "social-interactions"], ["year1-pets", "keep", null], ["year1-legacy", "keep", null], ["year2-gone", "tombstone", null]]);
-  const after = [doc("year2-greetings", { topicId: { stringValue: "social-interactions" } }), docs[1], docs[2], docs[3]];
-  assert.deepEqual(verifyMigration(docs, after, plan), []);
-  const changed = [doc("year2-greetings", { topicId: { stringValue: "school" } }), docs[1], docs[2], docs[3]];
-  assert.deepEqual(planRetiredRenameRollback(docs, after, LEGACY_TOPIC_IDS).map((s) => [s.id, s.action, s.value]), [["year2-greetings", "restore", "greetings"]]);
-  assert.deepEqual(planRetiredRenameRollback(docs, changed, LEGACY_TOPIC_IDS).map((s) => [s.id, s.action]), [["year2-greetings", "keep-changed"]]);
+  assert.deepEqual(plan.actions.map((a) => [a.id, a.action, a.next ?? null]), [["year2-how-are-you", "write", { topicIds: null, topicId: "social-interactions" }], ["year2-multi", "write", { topicIds: ["people", "social-interactions"], topicId: "people" }], ["year1-pets", "keep", null], ["year1-legacy", "keep", null], ["year2-gone", "tombstone", null]]);
+});
+
+const ids = (...list) => ({ arrayValue: { values: list.map((stringValue) => ({ stringValue })) } });
+test("multi-topic backfill: single-topic sets get topicIds [topicId]; existing arrays, unassigned sets and tombstones are left alone", () => {
+  const docs = [doc("year3-age", { topicId: { stringValue: "people" } }), doc("year3-multi", { topicId: { stringValue: "numbers" }, topicIds: ids("numbers", "people") }), doc("year1-none", {}), doc("year2-gone", { deleted: { booleanValue: true } })];
+  const plan = planTopicIdsBackfill(docs);
+  assert.deepEqual(plan.actions.map((a) => [a.id, a.action, a.next ?? null]), [["year3-age", "write", { topicIds: ["people"], topicId: "people" }], ["year3-multi", "already", null], ["year1-none", "unassigned", null], ["year2-gone", "tombstone", null]]);
+  const after = [doc("year3-age", { topicId: { stringValue: "people" }, topicIds: ids("people") }), docs[1], docs[2], docs[3]];
+  assert.deepEqual(verifyTopicFields(docs, after, plan), []);
+  const tampered = [doc("year3-age", { topicId: { stringValue: "people" }, topicIds: ids("people"), title: { stringValue: "x" } }), docs[1], docs[2], docs[3]];
+  assert.match(verifyTopicFields(docs, tampered, plan).join(), /fields other than topicId\/topicIds changed/);
+});
+
+test("explicit topics (Age -> Numbers + People): canonical order, refuses unknown sets/topics, rollback restores only untouched results", () => {
+  const docs = [doc("year3-age", { topicId: { stringValue: "people" }, topicIds: ids("people") }), doc("year1-pets", { topicId: { stringValue: "animals" } })];
+  const plan = planExplicitTopics(docs, { "year3-age": ["people", "numbers"] });
+  assert.deepEqual(plan.actions.map((a) => [a.id, a.action, a.next ?? null]), [["year3-age", "write", { topicIds: ["numbers", "people"], topicId: "numbers" }], ["year1-pets", "keep", null]]);
+  assert.throws(() => planExplicitTopics(docs, { "year9-none": ["people"] }), /Set not found/);
+  assert.throws(() => planExplicitTopics(docs, { "year3-age": ["sports"] }), /Invalid topics/);
+  const after = [doc("year3-age", { topicId: { stringValue: "numbers" }, topicIds: ids("numbers", "people") }), docs[1]];
+  assert.deepEqual(planTopicFieldsRollback(docs, after, plan).map((s) => [s.id, s.action, s.next ?? null]), [["year3-age", "restore", { topicIds: ["people"], topicId: "people" }]]);
+  const editedSince = [doc("year3-age", { topicId: { stringValue: "people" }, topicIds: ids("people", "school") }), docs[1]];
+  assert.deepEqual(planTopicFieldsRollback(docs, editedSince, plan).map((s) => s.action), ["keep-changed"]);
+});
+
+test("multi-topic helpers: setTopicIds prefers topicIds; normaliseTopicIds keeps valid, unique, canonical order", () => {
+  assert.deepEqual(setTopicIds({ topicId: "people" }), ["people"]);
+  assert.deepEqual(setTopicIds({ topicId: "animals", topicIds: ["people", "numbers"] }), ["numbers", "people"]);
+  assert.deepEqual(setTopicIds({ topicIds: [] }), []);
+  assert.deepEqual(setTopicIds({}), []);
+  assert.deepEqual(normaliseTopicIds(["community", "greetings", "numbers", "community"]), ["numbers", "community"]);
 });

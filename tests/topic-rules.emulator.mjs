@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -135,7 +135,56 @@ test("v1.1 rename-retired: greetings moves to social-interactions, rerun is a no
   const { topicId: a, ...restAfter } = after.fields; const { topicId: b, ...restBefore } = before.fields;
   assert.deepEqual(restAfter, restBefore, "only topicId changed");
   assert.match(run("--apply"), /Readback passed: 0 assigned/);
-  const first = readdirSync(backups).filter((f) => !f.endsWith(".after.json")).sort()[0];
-  assert.match(run("--rollback", path.join(backups, first), "--apply"), /Rollback complete/);
+  const applied = readdirSync(backups).filter((f) => f.endsWith(".plan.json")).sort()[0].replace(".plan.json", ".json");
+  assert.match(run("--rollback", path.join(backups, applied), "--apply"), /Rollback complete/);
   assert.equal(await topicOf("year2-greetings-test"), "greetings");
+});
+
+// ---- Multi-topic (topicIds) ----
+const topicIdsOf = async (id) => ((await call(`${docs}/vocabularySets/${id}`, { auth: "owner" })).json?.fields?.topicIds?.arrayValue?.values || []).map((v) => v.stringValue);
+const seedTeacher = () => call(`${docs}/authorizedTeachers/teacher-1`, { method: "PATCH", auth: "owner", body: { fields: { active: { booleanValue: true } } } });
+
+test("multi-topic rules: valid topicIds accepted; invalid, duplicate or inconsistent lists refused; topics can't be dropped", async () => {
+  await seedTeacher();
+  assert.equal((await write("teacher-1", "zz-multi", set("zz-multi", { topicIds: ["numbers", "people"], topicId: "numbers" }))).status, 200);
+  assert.deepEqual(await topicIdsOf("zz-multi"), ["numbers", "people"]);
+  for (const bad of [{ topicIds: ["numbers", "greetings"], topicId: "numbers" }, { topicIds: ["people", "people"], topicId: "people" }, { topicIds: "people", topicId: "people" }, { topicIds: ["people"], topicId: "animals" }])
+    assert.equal((await write("teacher-1", "zz-multi-bad", set("zz-multi-bad", bad))).status, 403, JSON.stringify(bad));
+  assert.equal((await write("teacher-1", "zz-multi", set("zz-multi", { topicIds: ["people"], topicId: "people" }))).status, 200, "removing one topic keeps the other");
+  assert.deepEqual(await topicIdsOf("zz-multi"), ["people"]);
+  assert.equal((await write("teacher-1", "zz-multi", set("zz-multi", { topicId: "people" }))).status, 403, "an old editor without topicIds cannot overwrite a multi-topic set");
+  assert.equal((await write("teacher-1", "zz-multi", set("zz-multi"))).status, 403, "topics can't be dropped");
+  await admin("zz-single", { ...set("zz-single", { topicId: "animals" }), published: true });
+  assert.equal((await write("teacher-1", "zz-single", set("zz-single", { topicId: "animals", title: "old editor save" }))).status, 200, "the old editor keeps working on sets that only have topicId");
+  assert.equal((await write("teacher-1", "zz-single", set("zz-single", { topicIds: ["animals", "nature"], topicId: "animals" }))).status, 200, "the new editor can add topics to a legacy set");
+  assert.equal((await write("student-1", "zz-single", set("zz-single", { topicIds: ["culture"], topicId: "culture" }))).status, 403);
+});
+
+test("multi-topic scripts: backfill then Age -> Numbers + People; reruns are no-ops; rollbacks restore", async () => {
+  await call(`http://${host}/emulator/v1/projects/${project}/databases/(default)/documents`, { method: "DELETE" });
+  const items = [{ id: "how-old", chinese: "你几岁？", pinyin: "ni ji sui", english: "How old are you?", image: null, audio: { aiEnabled: true } }];
+  await admin("year3-age", { ...set("year3-age", { yearLevel: 3, title: "Age", topicId: "people", items }), published: true });
+  await admin("year1-pets", { ...set("year1-pets", { yearLevel: 1, title: "Pets I", topicId: "animals" }), published: true });
+  const backups = mkdtempSync(path.join(tmpdir(), "topic-multi-"));
+  const run = (...extra) => execFileSync(process.execPath, ["scripts/migrations/assign-topic-ids.mjs", "--project", project, "--emulator", host, "--backup-dir", backups, ...extra], { cwd: repo, encoding: "utf8" });
+  const ageBefore = (await call(`${docs}/vocabularySets/year3-age`, { auth: "owner" })).json;
+
+  assert.match(run("--backfill-topic-ids", "--apply"), /Readback passed: 2 assigned/);
+  assert.deepEqual(await topicIdsOf("year3-age"), ["people"]); assert.deepEqual(await topicIdsOf("year1-pets"), ["animals"]);
+  assert.match(run("--backfill-topic-ids", "--apply"), /Readback passed: 0 assigned/);
+
+  assert.match(run("--set-topics", "year3-age=people,numbers"), /Dry run: 1 set\(s\) would be assigned/);
+  assert.match(run("--set-topics", "year3-age=people,numbers", "--apply"), /Readback passed: 1 assigned/);
+  assert.deepEqual(await topicIdsOf("year3-age"), ["numbers", "people"]);
+  assert.equal(await topicOf("year3-age"), "numbers");
+  const ageAfter = (await call(`${docs}/vocabularySets/year3-age`, { auth: "owner" })).json;
+  for (const f of ["items", "title", "yearLevel", "published", "updatedAt", "updatedBy"]) assert.deepEqual(ageAfter.fields[f], ageBefore.fields[f], f);
+  assert.match(run("--set-topics", "year3-age=people,numbers", "--apply"), /Readback passed: 0 assigned/);
+  assert.throws(() => execFileSync(process.execPath, ["scripts/migrations/assign-topic-ids.mjs", "--project", project, "--emulator", host, "--backup-dir", backups, "--set-topics", "year3-age=sports"], { cwd: repo, encoding: "utf8", stdio: "pipe" }), /Invalid topics/);
+
+  // Roll back the run that wrote Age (reruns save empty plans).
+  const plans = readdirSync(backups).filter((f) => f.endsWith(".plan.json")).sort().filter((f) => readFileSync(path.join(backups, f), "utf8").includes('"target": "numbers,people"'));
+  const setTopicsBackup = path.join(backups, plans[plans.length - 1].replace(".plan.json", ".json"));
+  assert.match(run("--set-topics", "year3-age=people,numbers", "--rollback", setTopicsBackup, "--apply"), /Rollback complete/);
+  assert.deepEqual(await topicIdsOf("year3-age"), ["people"]); assert.equal(await topicOf("year3-age"), "people");
 });

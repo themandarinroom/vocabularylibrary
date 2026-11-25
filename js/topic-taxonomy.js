@@ -52,3 +52,18 @@ export function resolveTopic(value) {
   const text = value.trim();
   return TOPIC_TAXONOMY.find((topic) => topic.id === text || topic.titleEn.toLowerCase() === text.toLowerCase() || topic.titleZh === text) || null;
 }
+
+// Multi-topic (v1.1): a set may belong to several topics through `topicIds`, an array of stable topic IDs.
+// Valid IDs are kept once each, in taxonomy order, so the same choice always produces the same array.
+export function normaliseTopicIds(list) {
+  if (!Array.isArray(list)) return [];
+  const chosen = new Set(list.filter(isValidTopicId));
+  return TOPIC_IDS.filter((id) => chosen.has(id));
+}
+
+// The topics of a stored set. `topicIds` wins when present; older sets only have the single `topicId`.
+// `topicId` is kept on new saves as a mirror of the first topic, for readers that predate topicIds.
+export function setTopicIds(set) {
+  if (Array.isArray(set?.topicIds)) return normaliseTopicIds(set.topicIds);
+  return isValidTopicId(set?.topicId) ? [set.topicId] : [];
+}

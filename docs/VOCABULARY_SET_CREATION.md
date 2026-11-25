@@ -73,11 +73,11 @@ The source of truth is `js/topic-taxonomy.js`.
 ## 3. Rules for AI-assisted, scripted and batch creation
 
 1. **Validate the topic before writing anything.** Use `resolveTopic()` or `isValidTopicId()` from `js/topic-taxonomy.js`. If the Topic and Topic ID disagree, the topic is missing, or the topic is not in the table, **stop and ask the owner**. Never guess, never fall back to a default, and never create a new topic.
-2. **Write the stable `topicId`** (for example `free-time`) into the set document. Never write the display label. The editor and `saveSet()` refuse a set without a valid `topicId`, and Firestore rules reject an unknown one.
+2. **Write the stable topic IDs** into the set document as `topicIds` (one or more, for example `["free-time"]` or `["numbers", "people"]`), plus `topicId` equal to the first. Never write display labels. The editor and `saveSet()` refuse a set without at least one valid topic, and Firestore rules reject unknown or duplicate IDs.
 3. **Scripts and imports** that write documents directly must include `topicId` in the full document.
    - The rules apply to client writes only.
    - Admin and REST imports bypass the rules, so the script itself must validate the topic.
-   - When updating an existing set, never drop its `topicId`.
+   - When updating an existing set, never drop its `topicId` or `topicIds`.
 4. **Keep the existing publication workflow:**
    - Staging first, with the owner's approval, then Production.
    - Stable set and item IDs.
@@ -89,9 +89,11 @@ The source of truth is `js/topic-taxonomy.js`.
    - Confirm the topic card's year badges include the set's year.
    - Confirm the topic illustration is unchanged.
 
-## 4. Changing a set's topic
+## 4. Changing a set's topics
 
-Open the set in the editor, choose the new Topic and save. The set ID, student URL, items, images and audio do not change. After a refresh, the set appears under its new topic.
+A set can belong to several topics (for example Age: Numbers and People). Task metadata may list several: `Topics: Numbers, People` / `Topic IDs: numbers, people`.
+
+Open the set in the editor, tick or untick topics and save. Unticking one topic leaves the others. The set ID, student URL, items, images and audio do not change. After a refresh, the set appears under its new topic.
 
 ## 5. Adding a topic
 
