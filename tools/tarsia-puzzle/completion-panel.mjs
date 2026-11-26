@@ -7,7 +7,7 @@ import { tarsiaCompletionRecord } from './engine/index.mjs';
 import { drawTarsiaBoard, recordImageUrls, puzzleLine } from './record-board.mjs';
 import { loadAllStrict, ImageLoadError } from '../learning-record-export/image-loader.mjs';
 import { drawRecordCard, DEFAULT_FORMAT, FORMATS } from '../learning-record-export/card.mjs';
-import { canvasToPngBlob, recordFileName, shareOrOffer } from '../learning-record-export/export.mjs';
+import { canvasToPngBlob, recordFileName, saveLearningRecord, prefersShareSheet } from '../learning-record-export/export.mjs';
 
 const $ = id => document.getElementById(id);
 
@@ -67,21 +67,32 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
     previewUrl = URL.createObjectURL(blob);
     $('cp-preview').src = previewUrl; $('cp-preview').closest('figure').hidden = false;
     $('cp-save').disabled = false; $('cp-save').dataset.filename = recordFileName(rec);
-    setStatus('Your learning record is ready.', 'ok');
+    setStatus(MESSAGES.ready, 'ok');
   }
 
-  async function save() {
-    if (!blob) return;
-    // Called straight from the tap, with the PNG already made, so iPad Safari keeps the share permission.
-    const result = await shareOrOffer(blob, $('cp-save').dataset.filename);
-    if (result === 'shared') { setStatus('Saved. Look for it where you chose to save it (for example Photos).', 'ok'); return; }
-    if (result === 'cancelled') return;
+  // D3: desktop → standard download; iPad/iPhone → share sheet (Save Image / Save to Files) with the press-and-hold
+  // fallback. Messages never claim the file was saved: neither a download starting nor the share sheet closing proves it.
+  const MESSAGES = Object.freeze({ ready: 'Your learning record is ready.', downloaded: 'Download started. Check your Downloads folder.',
+    share: 'Choose Save Image or Save to Files, if available.', cancelled: 'Your learning record is ready to save.' });
+  function showFallback() {
     if (fallbackUrl) URL.revokeObjectURL(fallbackUrl);
     fallbackUrl = URL.createObjectURL(blob);
     $('cp-fallback-img').src = fallbackUrl;
     $('cp-download').href = fallbackUrl; $('cp-download').download = $('cp-save').dataset.filename;
     $('cp-fallback').hidden = false;
     $('cp-fallback').scrollIntoView({ block: 'nearest' });
+  }
+  async function save() {
+    if (!blob) return;
+    const mobile = prefersShareSheet();
+    if (mobile) setStatus(MESSAGES.share, 'ok'); // shown while the share sheet is open
+    // Called straight from the tap, with the PNG already made, so iPad Safari keeps the share permission.
+    const result = await saveLearningRecord(blob, $('cp-save').dataset.filename, { mobile });
+    if (result === 'downloaded') { setStatus(MESSAGES.downloaded, 'ok'); return; }
+    if (result === 'shared') { setStatus(MESSAGES.share, 'ok'); return; }
+    if (result === 'cancelled') { setStatus(MESSAGES.cancelled, 'ok'); return; } // not an error
+    setStatus(MESSAGES.cancelled, 'ok'); // file sharing unavailable: press-and-hold picture + download link
+    showFallback();
   }
 
   const debounced = () => { clearTimeout(timer); $('cp-save').disabled = true; timer = setTimeout(render, 250); };
