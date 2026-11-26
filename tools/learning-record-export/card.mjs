@@ -1,14 +1,15 @@
-// Evidence of Learning — shared A6 learning-record card (Phase C1 proof of concept). Draws the activity-independent
+// Evidence of Learning — shared learning-record card (A5 default, A6 compact option) (Phase C1 proof of concept). Draws the activity-independent
 // parts of a record (branding, details, learning intention, success criteria, statement) onto a 2D canvas context and
 // hands a content box to the activity's own renderer (e.g. the Tarsia board). White, print-friendly, no controls.
-import { EXPORT_FORMAT } from '../learning-record/record.mjs';
 
 // Paper formats at 300 dpi. The card is designed in A6 units and scaled up for A5 (same layout, 1.42× larger in print).
 export const FORMATS = Object.freeze({ A6: Object.freeze({ id: 'A6', width: 1748, height: 1240, mm: [148, 105] }), A5: Object.freeze({ id: 'A5', width: 2480, height: 1748, mm: [210, 148] }) });
-export const pxToPt = (px, format = FORMATS.A6) => px * (format.width / FORMATS.A6.width) * 72 / 300;
-export const pxToMm = (px, format = FORMATS.A6) => px * (format.width / FORMATS.A6.width) * 25.4 / 300;
+export const DEFAULT_FORMAT = FORMATS.A5; // owner decision (D1 review): A5 default, A6 optional compact format
+export const pxToPt = (px, format = DEFAULT_FORMAT) => px * (format.width / FORMATS.A6.width) * 72 / 300;
+export const pxToMm = (px, format = DEFAULT_FORMAT) => px * (format.width / FORMATS.A6.width) * 25.4 / 300;
 
-export const CARD = Object.freeze({ width: EXPORT_FORMAT.width, height: EXPORT_FORMAT.height, margin: 60, textWidth: 520,
+// CARD is the layout grid in A6 design units; every format draws the same layout scaled (k = format.width / CARD.width).
+export const CARD = Object.freeze({ width: FORMATS.A6.width, height: FORMATS.A6.height, margin: 60, textWidth: 520,
   ink: '#0c193b', muted: '#5b6b80', accent: '#0d4b8f', ok: '#1f7a45', rule: '#d7dde6',
   font: '"Avenir Next", Avenir, "Segoe UI", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif' });
 
@@ -29,7 +30,7 @@ const formatDate = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-AU'
  * @param {object} record  from buildCompletionRecord()
  * @param {{ emblem?: CanvasImageSource, drawContent: (ctx, box) => void, puzzleLine?: string }} options
  */
-export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine, format = FORMATS.A6 }) {
+export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine, format = DEFAULT_FORMAT }) {
   const { width: W, height: H, margin: M, textWidth: TW } = CARD;
   ctx.save();
   const k = format.width / W; // draw in A6 units; A5 is the same card scaled up

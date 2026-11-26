@@ -41,7 +41,7 @@ test('PNG helpers: toBlob first, data URL fallback, tainted canvas surfaces as a
   const fallback = await canvasToPngBlob({ toDataURL: () => 'data:image/png;base64,iVBORw0K' });
   assert.equal(fallback.type, 'image/png');
   await assert.rejects(canvasToPngBlob({ toBlob: () => { throw Object.assign(new Error('tainted'), { name: 'SecurityError' }); } }), /tainted/);
-  assert.deepEqual([EXPORT_FORMAT.width, EXPORT_FORMAT.height, CARD.width, CARD.height], [1748, 1240, 1748, 1240]);
+  assert.deepEqual([EXPORT_FORMAT.width, EXPORT_FORMAT.height, CARD.width, CARD.height], [2480, 1748, 1748, 1240]); // A5 export, A6 design grid
 });
 
 test('file name is local and safe; sharing never assumes Photos', async () => {

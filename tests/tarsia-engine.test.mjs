@@ -474,7 +474,7 @@ test('completion record: only after completion, derived intention, optional loca
   assert.equal(record.content.slots.flatMap(s => s.edges).filter(e => !e.blank).length, 22);
   const anonymous = tarsiaCompletionRecord(puzzle, solvedState(puzzle), { vocabularySets });
   assert.deepEqual(anonymous.student, {});
-  assert.deepEqual([EXPORT_FORMAT.width, EXPORT_FORMAT.height], [1748, 1240]);
+  assert.deepEqual([EXPORT_FORMAT.width, EXPORT_FORMAT.height, EXPORT_FORMAT.paper], [2480, 1748, 'A5 landscape']);
   assert.throws(() => buildCompletionRecord({ activity: {} }), /needs/);
 });
 

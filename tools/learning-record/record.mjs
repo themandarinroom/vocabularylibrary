@@ -6,7 +6,8 @@
 export const RECORD_SCHEMA_VERSION = 1;
 // Shown on every record: it documents successful completion, not independent mastery.
 export const STATEMENT = 'This record shows that the activity was completed successfully.'; // D1: owner removed the second sentence
-export const EXPORT_FORMAT = Object.freeze({ type: 'image/png', width: 1748, height: 1240, paper: 'A6 landscape', dpi: 300, background: '#ffffff' });
+// D2: A5 is the approved default record format (A6 stays available as a compact option, see learning-record-export/card.mjs).
+export const EXPORT_FORMAT = Object.freeze({ type: 'image/png', width: 2480, height: 1748, paper: 'A5 landscape', dpi: 300, background: '#ffffff' });
 
 const text = (value, max) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 const localDate = date => {

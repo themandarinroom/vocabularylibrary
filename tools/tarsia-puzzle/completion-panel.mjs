@@ -6,7 +6,7 @@
 import { tarsiaCompletionRecord } from './engine/index.mjs';
 import { drawTarsiaBoard, recordImageUrls, puzzleLine } from './record-board.mjs';
 import { loadAllStrict, ImageLoadError } from '../learning-record-export/image-loader.mjs';
-import { drawRecordCard, CARD } from '../learning-record-export/card.mjs';
+import { drawRecordCard, DEFAULT_FORMAT } from '../learning-record-export/card.mjs';
 import { canvasToPngBlob, recordFileName, shareOrOffer } from '../learning-record-export/export.mjs';
 
 const $ = id => document.getElementById(id);
@@ -54,8 +54,8 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
   async function render() {
     if (!images) return;
     const token = ++renderToken, rec = record(student());
-    const canvas = document.createElement('canvas'); canvas.width = CARD.width; canvas.height = CARD.height;
-    drawRecordCard(canvas.getContext('2d'), rec, { emblem, puzzleLine: puzzleLine(rec.content), drawContent: (ctx, box) => drawTarsiaBoard(ctx, box, rec.content, images) });
+    const canvas = document.createElement('canvas'); canvas.width = DEFAULT_FORMAT.width; canvas.height = DEFAULT_FORMAT.height;
+    drawRecordCard(canvas.getContext('2d'), rec, { emblem, format: DEFAULT_FORMAT, puzzleLine: puzzleLine(rec.content), drawContent: (ctx, box) => drawTarsiaBoard(ctx, box, rec.content, images) });
     let next;
     try { next = await canvasToPngBlob(canvas); } catch { setStatus('Your learning record could not be made on this device.', 'error'); return; }
     if (token !== renderToken || closed) return; // a newer render (name typed) replaced this one

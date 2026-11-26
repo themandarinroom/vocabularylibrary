@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { layoutPiece, placeLabel, estimateWidth, LAYOUT } from '../tools/tarsia-puzzle/label-layout.mjs';
 import { slotNeighbour, pieceDescription, slotDescription } from '../tools/tarsia-puzzle/workspace-model.mjs';
 import { getTemplate, MODES, createStudentPuzzle } from '../tools/tarsia-puzzle/engine/index.mjs';
-import { FORMATS, pxToPt, pxToMm } from '../tools/learning-record-export/card.mjs';
+import { FORMATS, DEFAULT_FORMAT, pxToPt, pxToMm } from '../tools/learning-record-export/card.mjs';
+import { EXPORT_FORMAT } from '../tools/learning-record/record.mjs';
 import { catalogueFromSets, mergeSets } from '../tools/vocabulary-games-core/vocabulary.mjs';
 import { FIXTURE_SETS } from '../tools/tarsia-puzzle/dev/fixtures.mjs';
 
@@ -71,9 +72,13 @@ test('spoken descriptions name every label, pictures by their English meaning', 
 
 test('record print sizes: A6 and A5 at 300 dpi', () => {
   assert.deepEqual([FORMATS.A6.width, FORMATS.A6.height, FORMATS.A5.width, FORMATS.A5.height], [1748, 1240, 2480, 1748]);
-  assert.equal(pxToPt(30).toFixed(1), '7.2');
+  assert.equal(pxToPt(30, FORMATS.A6).toFixed(1), '7.2');
   assert.equal(pxToPt(30, FORMATS.A5).toFixed(1), '10.2');
-  assert.equal(pxToMm(118).toFixed(1), '10.0');
+  assert.equal(pxToMm(118, FORMATS.A6).toFixed(1), '10.0');
+  // Owner decision (D1 review): A5 is the default; A6 stays available as the compact option.
+  assert.equal(DEFAULT_FORMAT, FORMATS.A5);
+  assert.deepEqual([EXPORT_FORMAT.width, EXPORT_FORMAT.height], [DEFAULT_FORMAT.width, DEFAULT_FORMAT.height]);
+  assert.equal(pxToPt(30), pxToPt(30, FORMATS.A5));
 });
 
 test('finished puzzle reads the right way up: horizontal pairs upright, sloping pairs at ±60°, never upside down', () => {
