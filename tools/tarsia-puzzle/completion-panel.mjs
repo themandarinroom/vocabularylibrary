@@ -6,7 +6,7 @@
 import { tarsiaCompletionRecord } from './engine/index.mjs';
 import { drawTarsiaBoard, recordImageUrls, puzzleLine } from './record-board.mjs';
 import { loadAllStrict, ImageLoadError } from '../learning-record-export/image-loader.mjs';
-import { drawRecordCard, DEFAULT_FORMAT } from '../learning-record-export/card.mjs';
+import { drawRecordCard, DEFAULT_FORMAT, FORMATS } from '../learning-record-export/card.mjs';
 import { canvasToPngBlob, recordFileName, shareOrOffer } from '../learning-record-export/export.mjs';
 
 const $ = id => document.getElementById(id);
@@ -29,12 +29,15 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
   const base = record({});
   $('cp-summary').textContent = completionSummary(base);
   $('cp-name').value = ''; $('cp-class').value = '';
+  for (const r of document.querySelectorAll('input[name="cp-size"]')) r.checked = r.value === DEFAULT_FORMAT.id; // A5 unless chosen
   $('cp-fallback').hidden = true; $('cp-retry').hidden = true;
   $('cp-preview').closest('figure').hidden = true; // shown once a record has been made
   setStatus('Making your learning record…');
 
   function setStatus(text, kind = '') { $('cp-status').textContent = text; $('cp-status').dataset.kind = kind; }
   const student = () => ({ firstName: $('cp-name').value, className: $('cp-class').value });
+  // D3: A5 is the default; A6 is the optional compact size (same layout, smaller print).
+  const format = () => FORMATS[document.querySelector('input[name="cp-size"]:checked')?.value] || DEFAULT_FORMAT;
 
   async function loadAssets() {
     $('cp-save').disabled = true; $('cp-retry').hidden = true;
@@ -54,8 +57,8 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
   async function render() {
     if (!images) return;
     const token = ++renderToken, rec = record(student());
-    const canvas = document.createElement('canvas'); canvas.width = DEFAULT_FORMAT.width; canvas.height = DEFAULT_FORMAT.height;
-    drawRecordCard(canvas.getContext('2d'), rec, { emblem, format: DEFAULT_FORMAT, puzzleLine: puzzleLine(rec.content), drawContent: (ctx, box) => drawTarsiaBoard(ctx, box, rec.content, images) });
+    const size = format(), canvas = document.createElement('canvas'); canvas.width = size.width; canvas.height = size.height;
+    drawRecordCard(canvas.getContext('2d'), rec, { emblem, format: size, puzzleLine: puzzleLine(rec.content), drawContent: (ctx, box) => drawTarsiaBoard(ctx, box, rec.content, images) });
     let next;
     try { next = await canvasToPngBlob(canvas); } catch { setStatus('Your learning record could not be made on this device.', 'error'); return; }
     if (token !== renderToken || closed) return; // a newer render (name typed) replaced this one
@@ -84,6 +87,7 @@ export function openCompletionPanel({ puzzle, state, sets, completedAt = new Dat
   const debounced = () => { clearTimeout(timer); $('cp-save').disabled = true; timer = setTimeout(render, 250); };
   $('cp-name').addEventListener('input', debounced, on);
   $('cp-class').addEventListener('input', debounced, on);
+  for (const r of document.querySelectorAll('input[name="cp-size"]')) r.addEventListener('change', debounced, on);
   $('cp-save').addEventListener('click', save, on);
   $('cp-retry').addEventListener('click', async () => { setStatus('Trying again…'); if (await loadAssets()) render(); }, on);
   $('cp-again').addEventListener('click', () => { close(); onPlayAgain(); }, on);

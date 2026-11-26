@@ -96,3 +96,14 @@ test('finished puzzle reads the right way up: horizontal pairs upright, sloping 
     assert.ok(t);
   }
 });
+
+test('D3: completion panel offers A5 (default) and A6 (compact) record sizes', async () => {
+  const fs = await import('node:fs');
+  const html = fs.readFileSync(new URL('../tools/tarsia-puzzle/index.html', import.meta.url), 'utf8');
+  const panel = fs.readFileSync(new URL('../tools/tarsia-puzzle/completion-panel.mjs', import.meta.url), 'utf8');
+  assert.match(html, /<input type="radio" name="cp-size" value="A5" checked> A5/);
+  assert.match(html, /<input type="radio" name="cp-size" value="A6"> A6/);
+  assert.match(panel, /FORMATS\[document\.querySelector\('input\[name="cp-size"\]:checked'\)\?\.value\] \|\| DEFAULT_FORMAT/);
+  assert.match(panel, /r\.checked = r\.value === DEFAULT_FORMAT\.id/, 'every new record starts at A5');
+  assert.equal(DEFAULT_FORMAT.id, 'A5');
+});

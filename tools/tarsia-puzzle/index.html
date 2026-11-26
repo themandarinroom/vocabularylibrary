@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Tarsia Puzzle · The Mandarin Room</title>
   <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-c2">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-d3">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to setup</a>
@@ -119,6 +119,10 @@
           <p class="help">Add your name to your learning record if you like. It stays on this device. Nothing is uploaded.</p>
           <label class="cp-field">First name <span class="field-hint">optional</span><input id="cp-name" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
           <label class="cp-field">Class <span class="field-hint">optional</span><input id="cp-class" maxlength="20" autocomplete="off" spellcheck="false"></label>
+          <fieldset class="cp-size"><legend>Record size</legend>
+            <label><input type="radio" name="cp-size" value="A5" checked> A5 <span class="field-hint">standard</span></label>
+            <label><input type="radio" name="cp-size" value="A6"> A6 <span class="field-hint">compact</span></label>
+          </fieldset>
           <button id="cp-save" type="button" class="primary-button" disabled>Save learning record</button>
           <p id="cp-status" class="cp-status" role="status"></p>
           <button id="cp-retry" type="button" class="secondary-button" hidden>Try again</button>

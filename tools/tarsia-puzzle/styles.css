@@ -299,3 +299,9 @@ body.playing .game-screen{height:calc(100dvh - 68px)}
 .workspace:has(:focus-visible) .kb-hint{display:block}
 .game-screen{padding:6px max(1.4vw,8px) calc(6px + env(safe-area-inset-bottom));gap:6px}
 .workspace{gap:8px}
+
+/* D3: record size choice in the completion panel (A5 default, A6 compact). */
+.cp-size{border:0;margin:4px 0 0;padding:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px}
+.cp-size legend{float:left;margin-right:6px;font-weight:700}
+.cp-size label{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer}
+.cp-size input{width:20px;height:20px;margin:0}
