@@ -122,3 +122,12 @@ h1, h2, h3, p { margin-top: 0; } h1, h2, h3 { line-height: 1.1; }
 /* Student header height is reserved without changing card controls or layout. */
 .student-page .student-shell{min-height:calc(100svh - 84px)}
 @media(pointer:coarse){.student-page .student-shell{min-height:calc(100svh - 112px)}}
+/* Topic field (24 Nov 2026): Year level and Topic sit side by side before the titles. */
+.set-details-grid { grid-template-columns: minmax(110px, .45fr) minmax(180px, 1fr) minmax(180px, 1fr); }.set-details-grid .topic-unassigned { color: #9c352d; font-weight: 650; }
+@media (max-width: 600px) { .set-details-grid { grid-template-columns: 1fr; } }
+/* Topics v1.1 multi-topic: a full-width row of topic checkboxes below Year level and the titles. */
+.topic-choices { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 14px; margin: 0; padding: 12px 14px; border: 1px solid #cdd3cf; border-radius: 10px; }
+.topic-choices legend { padding: 0 6px; font-size: 14px; font-weight: 750; }
+.topic-choices #topic-note { grid-column: 1 / -1; margin-bottom: 4px; }
+.topic-choice { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; font-size: 13px !important; font-weight: 600 !important; }
+.topic-choice input { width: 18px; min-height: 18px; margin: 0; }

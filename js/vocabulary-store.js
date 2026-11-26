@@ -1,5 +1,6 @@
 import { firebaseConfig } from "./firebase-config.js";
 import { getFirebaseServices } from "./firebase.js";
+import { setTopicIds, normaliseTopicIds } from "./topic-taxonomy.js?v=topics-3";
 
 const COLLECTION = "vocabularySets";
 const CACHE_SCHEMA_VERSION = 3;
@@ -39,9 +40,18 @@ function publicSet(data) {
     coverImage: data.coverImage || null,
     coverImageStoragePath: data.coverImageStoragePath || null,
     coverImageGenerated: data.coverImageGenerated === true,
+    // Topics (stable IDs from js/topic-taxonomy.js): topicIds holds every topic; topicId mirrors the first one
+    // for readers that predate multi-topic sets. A set without topics stays "unassigned".
+    ...topicFields(setTopicIds(data)),
     items
   });
 }
+
+// Exported for tests: the one place that decides which set fields are stored, cached and shown.
+export { publicSet as publicVocabularySet };
+
+export const TOPIC_REQUIRED_MESSAGE = "Choose at least one Topic before saving. Every vocabulary set needs one or more of the approved topics.";
+function topicFields(topicIds) { return topicIds.length ? { topicIds, topicId: topicIds[0] } : {}; }
 
 function cleanCachedSet(set) {
   const cleaned = publicSet(set);
@@ -138,6 +148,7 @@ export async function getSet(id) {
 }
 
 export async function saveSet(nextSet, originalId = null) {
+  if (!Array.isArray(nextSet?.topicIds) || !normaliseTopicIds(nextSet.topicIds).length || normaliseTopicIds(nextSet.topicIds).length !== nextSet.topicIds.length) throw new Error(TOPIC_REQUIRED_MESSAGE);
   const services = await getFirebaseServices();
   if (!services.auth.currentUser) throw new Error("Sign in with an authorised teacher account before saving.");
   const duplicate = (await getSets()).some((set) => set.id === nextSet.id && set.id !== originalId);

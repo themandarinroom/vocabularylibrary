@@ -1,0 +1,158 @@
+#!/usr/bin/env node
+// Assigns the approved topicId to existing vocabulary sets. Idempotent and reversible.
+//
+//   node scripts/migrations/assign-topic-ids.mjs --project <id> [--emulator 127.0.0.1:8080]
+//        [--apply] [--confirm-production] [--backup-dir <dir>]
+//   node scripts/migrations/assign-topic-ids.mjs --project <id> --rollback <backup.json> [--apply] ...
+// Topic-field modes (v1.1) write topicIds and topicId together and save their plan beside the backup:
+//   --rename-retired         sets on a retired ID move to its replacement (greetings -> social-interactions)
+//   --backfill-topic-ids     sets with only topicId get topicIds: [topicId]
+//   --set-topics "year3-age=people,numbers;..."   explicit, owner-approved topic lists
+// With --rollback <backup.json> in the same mode, the saved plan is undone where the sets still carry what it wrote.
+//
+// Safety:
+//   - Dry run unless --apply. The Production project also needs --confirm-production.
+//   - Before any write, every vocabularySets document is backed up to JSON.
+//   - Each write is a field-masked commit of topicId only, with an updateTime precondition, so
+//     items, covers, audio, published and every other field cannot change, and a document
+//     edited in the meantime is refused rather than overwritten.
+//   - After apply, every document is read back and compared with the backup.
+//   - Sets not in topic-assignments.json, or with a different topic already, are only reported.
+import fs from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { planMigration, verifyMigration, planRollback, planRetiredRename, planTopicIdsBackfill, planExplicitTopics, verifyTopicFields, planTopicFieldsRollback, docId } from "./topic-migration-core.mjs";
+import { LEGACY_TOPIC_IDS } from "../../js/topic-taxonomy.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const PRODUCTION = "the-mandarin-room";
+const args = process.argv.slice(2);
+const flag = (name) => args.includes(name);
+const option = (name) => { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : undefined; };
+
+const project = option("--project");
+const emulator = option("--emulator");
+const apply = flag("--apply");
+const rollbackFile = option("--rollback");
+const renameRetired = flag("--rename-retired");
+const backfill = flag("--backfill-topic-ids");
+const setTopicsArg = option("--set-topics");
+const topicMode = renameRetired || backfill || Boolean(setTopicsArg);
+if ([renameRetired, backfill, Boolean(setTopicsArg)].filter(Boolean).length > 1) throw new Error("Use one topic mode at a time.");
+const wantedTopics = setTopicsArg ? Object.fromEntries(setTopicsArg.split(";").filter(Boolean).map((pair) => { const [id, list] = pair.split("="); return [id.trim(), (list || "").split(",").map((t) => t.trim()).filter(Boolean)]; })) : null;
+const backupDir = path.resolve(option("--backup-dir") || path.join(here, "backups"));
+if (!project || !/^[a-z0-9-]+$/.test(project)) throw new Error("Pass --project <firebase-project-id>.");
+if (emulator && !/^(127\.0\.0\.1|localhost):\d+$/.test(emulator)) throw new Error("--emulator must be 127.0.0.1:<port> or localhost:<port>.");
+if (!emulator && project === PRODUCTION && apply && !flag("--confirm-production")) throw new Error("Refusing to write to Production without --confirm-production.");
+
+const { assignments } = JSON.parse(fs.readFileSync(path.join(here, "topic-assignments.json"), "utf8"));
+const root = emulator ? `http://${emulator}/v1` : "https://firestore.googleapis.com/v1";
+const collection = `${root}/projects/${project}/databases/(default)/documents/vocabularySets`;
+
+async function accessToken() {
+  if (emulator) return "owner"; // emulator admin bypass; never sent to a real project
+  if (process.env.GOOGLE_OAUTH_ACCESS_TOKEN) return process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
+  const require = createRequire("/opt/homebrew/lib/node_modules/firebase-tools/lib/");
+  const { requireAuth } = require("./requireAuth.js");
+  const { getAccessToken } = require("./apiv2.js");
+  const { configstore } = require("./configstore.js");
+  await requireAuth({ user: configstore.get("user"), tokens: configstore.get("tokens") });
+  return getAccessToken();
+}
+const token = await accessToken();
+async function request(url, options = {}) {
+  const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...options.headers } });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`${response.status} ${text.slice(0, 400)}`);
+  return text ? JSON.parse(text) : null;
+}
+async function listAll() {
+  const docs = []; let pageToken = "";
+  do {
+    const page = await request(`${collection}?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`);
+    docs.push(...(page.documents || [])); pageToken = page.nextPageToken || "";
+  } while (pageToken);
+  return docs.sort((a, b) => docId(a).localeCompare(docId(b)));
+}
+const commitUrl = `${root}/projects/${project}/databases/(default)/documents:commit`;
+// One atomic write per set: only topicId (updateMask), and only if the set is unchanged since the backup (updateTime).
+// A topicId absent from fields with the mask set removes the field (rollback).
+// Topic-field modes write topicId and topicIds in one masked write; a null value removes that field.
+const enc = (v) => (Array.isArray(v) ? { arrayValue: { values: v.map((x) => ({ stringValue: x })) } } : { stringValue: v });
+const writeTopicFields = (doc, next) => request(commitUrl, { method: "POST", body: JSON.stringify({ writes: [{
+  update: { name: doc.name, fields: Object.fromEntries(Object.entries(next).filter(([, v]) => v !== null).map(([k, v]) => [k, enc(v)])) },
+  updateMask: { fieldPaths: ["topicId", "topicIds"] },
+  currentDocument: { updateTime: doc.updateTime }
+}] }) });
+const writeTopic = (doc, topicId) => request(commitUrl, { method: "POST", body: JSON.stringify({ writes: [{
+  update: { name: doc.name, fields: topicId ? { topicId: { stringValue: topicId } } : {} },
+  updateMask: { fieldPaths: ["topicId"] },
+  currentDocument: { updateTime: doc.updateTime }
+}] }) });
+
+const before = await listAll();
+fs.mkdirSync(backupDir, { recursive: true });
+const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+const backupPath = path.join(backupDir, `vocabularySets-${project}${emulator ? "-emulator" : ""}-${stamp}.json`);
+fs.writeFileSync(backupPath, JSON.stringify({ project, emulator: emulator || null, takenAt: new Date().toISOString(), documents: before }, null, 2));
+console.log(`Backup of ${before.length} documents: ${backupPath}`);
+
+if (rollbackFile) {
+  const backup = JSON.parse(fs.readFileSync(path.resolve(rollbackFile), "utf8"));
+  if (backup.project !== project) throw new Error(`Backup is for ${backup.project}, not ${project}.`);
+  if (topicMode) {
+    const savedPlan = JSON.parse(fs.readFileSync(path.resolve(rollbackFile).replace(/\.json$/, ".plan.json"), "utf8"));
+    const steps = planTopicFieldsRollback(backup.documents, before, savedPlan);
+    console.table(steps.map(({ id, action, next }) => ({ id, action, restore: next ? JSON.stringify(next) : "" })));
+    if (!apply) { console.log("Dry run: nothing written. Add --apply to undo."); process.exit(0); }
+    for (const step of steps.filter((entry) => entry.action === "restore")) { await writeTopicFields(step, step.next); console.log(`restored: ${step.id}`); }
+    console.log("Rollback complete.");
+    process.exit(0);
+  }
+  const steps = planRollback(backup.documents, before, assignments);
+  console.table(steps.map(({ id, action, current }) => ({ id, action, current: current ?? "" })));
+  if (!apply) { console.log("Dry run: nothing written. Add --apply to undo."); process.exit(0); }
+  for (const step of steps.filter((entry) => entry.action === "remove")) {
+    await writeTopic(step, null);
+    console.log(`removed topicId: ${step.id}`);
+  }
+  const after = await listAll();
+  const left = after.filter((doc) => steps.some((step) => step.action === "remove" && step.id === docId(doc)) && doc.fields?.topicId);
+  if (left.length) throw new Error(`Rollback incomplete: ${left.map(docId).join(", ")}`);
+  console.log("Rollback complete.");
+  process.exit(0);
+}
+
+if (topicMode) {
+  const plan = renameRetired ? planRetiredRename(before, LEGACY_TOPIC_IDS) : backfill ? planTopicIdsBackfill(before) : planExplicitTopics(before, wantedTopics);
+  console.table(plan.actions.map(({ id, action, current, target }) => ({ id, action, current: current ?? "", target: target ?? "" })));
+  const writes = plan.actions.filter((entry) => entry.action === "write");
+  if (!apply) { console.log(`Dry run: ${writes.length} set(s) would be assigned. Nothing written.`); process.exit(0); }
+  if (writes.length) fs.writeFileSync(backupPath.replace(/\.json$/, ".plan.json"), JSON.stringify(plan, null, 2)); // the undo record
+  for (const step of writes) { await writeTopicFields(step, step.next); console.log(`wrote ${step.id}: ${JSON.stringify(step.next)}`); }
+  const after = await listAll();
+  const failures = verifyTopicFields(before, after, plan);
+  fs.writeFileSync(backupPath.replace(/\.json$/, ".after.json"), JSON.stringify({ project, documents: after, failures }, null, 2));
+  if (failures.length) { console.error("Readback FAILED:\n" + failures.join("\n")); process.exit(1); }
+  console.log(`Readback passed: ${writes.length} assigned, all other fields unchanged. Rollback: --rollback ${backupPath} with the same mode flag.`);
+  process.exit(0);
+}
+
+const plan = planMigration(before, assignments);
+console.table(plan.actions.map(({ id, action, current, target }) => ({ id, action, current: current ?? "", target: target ?? "" })));
+if (plan.missing.length) console.log(`Approved IDs not found (nothing done): ${plan.missing.join(", ")}`);
+const toAssign = plan.actions.filter((entry) => entry.action === "assign");
+const review = plan.actions.filter((entry) => entry.action === "conflict" || entry.action === "unmapped");
+if (review.length) console.log(`Needs a proposal before migration (left unchanged): ${review.map((entry) => `${entry.id} (${entry.action})`).join(", ")}`);
+if (!apply) { console.log(`Dry run: ${toAssign.length} set(s) would be assigned. Nothing written.`); process.exit(0); }
+
+for (const step of toAssign) {
+  await writeTopic(step, step.target);
+  console.log(`assigned ${step.id} -> ${step.target}`);
+}
+const after = await listAll();
+const failures = verifyMigration(before, after, plan);
+fs.writeFileSync(backupPath.replace(/\.json$/, ".after.json"), JSON.stringify({ project, documents: after, failures }, null, 2));
+if (failures.length) { console.error("Readback FAILED:\n" + failures.join("\n")); process.exit(1); }
+console.log(`Readback passed: ${toAssign.length} assigned, all other fields unchanged. Rollback: --rollback ${backupPath}`);

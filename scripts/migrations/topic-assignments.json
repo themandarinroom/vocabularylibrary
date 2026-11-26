@@ -1,0 +1,28 @@
+{
+  "description": "Owner-approved topic for each vocabulary set published on Production on 24 November 2026. Frozen: the migration never guesses a topic for a set that is not listed here.",
+  "approved": "2026-11-24",
+  "assignments": {
+    "prep-numbers": "numbers",
+    "prep-colours-i": "colours",
+    "year1-body-parts": "people",
+    "year2-family": "people",
+    "year3-age": "people",
+    "year1-pets": "animals",
+    "year1-pets-ii": "animals",
+    "year2-wild-animals-i": "animals",
+    "year2-wild-animals-ii": "animals",
+    "year3-food-i": "food-drinks",
+    "year3-food-ii": "food-drinks",
+    "year3-fruit": "food-drinks",
+    "year4-places-at-school-i": "school",
+    "year4-places-at-school-ii": "school",
+    "year5-sports-i": "free-time",
+    "year5-sports-ii": "free-time",
+    "year4-australian-states": "countries",
+    "year5-countries": "countries",
+    "year5-countries-ii": "countries",
+    "year5-countries-iii": "countries",
+    "year4-twelve-months": "time-weather",
+    "year4-weather": "time-weather"
+  }
+}
