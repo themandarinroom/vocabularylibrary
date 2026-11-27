@@ -29,22 +29,22 @@
       <div class="mode-strip"><strong>Solo Bingo</strong><span>Play at your own pace</span></div>
       <div class="setup-grid">
         <section class="panel" aria-labelledby="words-title">
-          <div class="panel-heading"><span class="step">1</span><h2 id="words-title">Choose your words</h2><span id="selected-count" class="pill">0 selected</span></div>
+          <div class="panel-heading"><span class="step">1</span><h2 id="words-title">Choose your words</h2></div>
           <div class="panel-body">
-            <fieldset id="source-controls" disabled><legend>Vocabulary source</legend><div class="segmented"><label><input type="radio" name="selection-mode" value="whole" checked> Whole set</label><label><input type="radio" name="selection-mode" value="custom"> Choose across sets</label></div>
-            <label class="field-label" for="set-picker">Published Vocabulary Library set</label><select id="set-picker"></select>
-            <div id="word-list" class="word-list"></div></fieldset>
-            <p id="load-status" role="status">Loading published vocabulary…</p><button id="reload" type="button" class="text-button">Reload vocabulary</button>
-            <div id="selection-summary" hidden><div class="summary-heading"><h3>Your selection</h3><button id="clear-all" type="button" class="text-button">Clear All</button></div><div id="selected-words" class="selected-words"></div></div>
+            <p class="field-label" id="set-label">Vocabulary Sets <span class="field-hint">Choose one or more</span></p>
+            <div id="set-picker" class="set-list" role="group" aria-labelledby="set-label" aria-busy="true"><p class="help">Loading…</p></div>
+            <p id="set-count" class="help" aria-live="polite"></p>
+            <p id="load-status" class="help" role="status">Loading published vocabulary…</p>
+            <div id="word-picker-area" hidden><div class="words-heading"><p class="field-label" id="words-label">Words <span class="field-hint">Tap a word to leave it out</span></p><button id="clear-all" type="button" class="text-button">Clear All</button></div>
+            <div id="word-picker" class="set-preview word-picker" role="group" aria-labelledby="words-label"></div></div>
             <div id="ambiguity-warning" class="notice warning" hidden></div>
+            <button id="reload" type="button" class="text-button">Reload vocabulary</button>
           </div>
         </section>
         <section class="panel options-panel" aria-labelledby="board-title">
           <div class="panel-heading"><span class="step">2</span><h2 id="board-title">Make it yours</h2></div>
           <div class="panel-body">
             <fieldset><legend>Board size</legend><div class="size-options"><label><input type="radio" name="size" value="3" checked><span><strong>3 × 3</strong><small>9 words</small></span></label><label><input type="radio" name="size" value="4"><span><strong>4 × 4</strong><small>16 words</small></span></label><label><input type="radio" name="size" value="5"><span><strong>5 × 5</strong><small>25 words</small></span></label></div></fieldset>
-            <label class="field-label" for="winning-mode">Winning mode</label><select id="winning-mode"><option value="line">Line Bingo</option><option value="full-house">Full House</option></select><p class="help" id="winning-help">Connect a row, column or diagonal. Full House needs more words than cells.</p>
-            <div class="how-to"><h3>A good game starts with listening.</h3><ol><li>Tap <strong>Listen</strong>, then find its characters.</li><li>A correct tap moves on to the next word. Try again after a mistake.</li><li>If the word is absent, choose <strong>Next</strong>.</li></ol><p>Five Learning Stars. Free replays. No rush.</p></div>
             <p id="configuration-status" class="notice" role="status">Choose enough words for your board.</p><button id="start-solo" type="button" class="primary-button" disabled>Play</button>
             <p class="help">Only published Library entries are used. Your selections and game stay on this device for this visit.</p>
           </div>
@@ -75,6 +75,14 @@
     </section>
     <noscript><p class="notice">Please enable JavaScript to play Bingo Board.</p></noscript>
   </main>
+  <div id="listen-break" class="listen-break" role="alertdialog" aria-modal="true" aria-labelledby="break-title" aria-describedby="break-text" hidden>
+    <div class="break-card">
+      <h2 id="break-title" tabindex="-1">Listening Break</h2>
+      <p id="break-text">Please listen carefully and avoid tapping too quickly.</p>
+      <p class="break-count"><span id="break-count">30</span><small>seconds</small></p>
+      <p>Your game will resume automatically.</p>
+    </div>
+  </div>
   <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Bingo v0.1.1 · Nov 2026</span></footer>
   <script type="module" src="./bootstrap.mjs"></script>
 </body>

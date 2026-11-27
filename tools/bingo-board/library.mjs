@@ -8,7 +8,10 @@ export async function loadCatalogue() {
   // Nothing is seeded, saved, edited or uploaded here. Item images are read alongside (v0.1.1 Visual option);
   // the shared catalogue adapter itself is unchanged.
   const sources = await getSets();
-  return { ...catalogueFromSets(sources), images: imagesFromSets(sources) };
+  // Chinese set titles are shown in the set list (as in Build the Great Wall); the shared catalogue adapter is unchanged.
+  const chineseTitles = new Map((Array.isArray(sources) ? sources : []).filter(set => typeof set?.id === 'string' && typeof set.chineseTitle === 'string' && set.chineseTitle.trim())
+    .map(set => [set.id.trim(), set.chineseTitle.trim()]));
+  return { ...catalogueFromSets(sources), images: imagesFromSets(sources), chineseTitles };
 }
 export async function loadVoice(entry) {
   const metadata = await getTeacherVoice(entry.setId, entry.id);

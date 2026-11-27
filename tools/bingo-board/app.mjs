@@ -8,10 +8,12 @@ import { renderBoard } from './components/board.mjs';
 import { renderStars } from './components/stars.mjs';
 import { el } from './components/dom.mjs';
 import { DISPLAY_ORDER, DEFAULT_DISPLAY, toggleDisplay, enabledCount, setSelectionState } from './display.mjs';
+import { createListenGuard } from './listen-guard.mjs';
+const yearLabel = yearLevel => Number(yearLevel) === 0 ? 'Prep' : Number.isFinite(Number(yearLevel)) && yearLevel !== null && yearLevel !== '' ? `Year ${yearLevel}` : 'All years';
 const $ = id => document.getElementById(id);
 let catalogue = [], selection = null, entries = new Map(), game = null, attemptNumber = 0, loading = false;
 // v0.1.1 board display options (kept for this visit, across restarts). Images that fail to load fall back to text.
-let display = DEFAULT_DISPLAY, images = new Map();
+let display = DEFAULT_DISPLAY, images = new Map(), chineseTitles = new Map();
 const brokenImages = new Set();
 let audioMessage = 'Tap Listen Word to begin.';
 // S3: after a correct answer the board shows the mark for ADVANCE_MS, then moves to the next word and plays it.
@@ -19,10 +21,18 @@ let audioMessage = 'Tap Listen Word to begin.';
 // the next word's lookup is fetched in advance, so the S2 audio player can start audio synchronously.
 const ADVANCE_MS = 600;
 let advanceTimer = null;
+// Listen anti-spam (thresholds in listen-guard.mjs). The test harness may pass a shorter config.
+const guard = createListenGuard({ config: globalThis.__TMR_LISTEN_GUARD_CONFIG__ });
+let audioBusySince = null, breakTimer = null;
+const audioBusy = () => audioBusySince !== null && Date.now() - audioBusySince < guard.config.BUSY_MAX_MS;
+const onBreak = () => guard.active();
 const SOUND_ERROR = 'Sound didn’t play. Tap Listen to try again.';
 const player = createAudioPlayer({ getVoice: loadVoice, canUseAiVoice, speakMandarin, playTeacherVoice,
   stopAi: () => window.speechSynthesis?.cancel(),
   onStatus: status => {
+    // Playback is "busy" from the first loading/playing report until it ends or fails (used to ignore overlapping Listen taps).
+    if (status.kind === 'loading' || status.kind === 'playing') { if (audioBusySince === null) audioBusySince = Date.now(); }
+    else audioBusySince = null;
     audioMessage = status.message; $('audio-status').textContent = audioMessage; $('audio-status').classList.toggle('warning', status.kind === 'error');
     // Full S2 audio messages stay available to screen readers in #audio-status; the visible line stays short.
     if (status.kind === 'error') feedback(SOUND_ERROR, 'warning');
@@ -31,79 +41,86 @@ const player = createAudioPlayer({ getVoice: loadVoice, canUseAiVoice, speakMand
 });
 $('boot-retry').onclick = () => window.location.reload();
 const size = () => Number(document.querySelector('input[name="size"]:checked').value);
-const winningMode = () => $('winning-mode').value;
+// Solo plays Line Bingo only (Full House is no longer offered in Solo; shared rules and Live are unchanged).
+const winningMode = () => 'line';
 
 function updateValidation() {
   const pool = selection?.items || [];
-  $('selected-count').textContent = `${pool.length} selected`;
   try { validateConfiguration(pool, size(), winningMode()); $('configuration-status').textContent = `${pool.length} words ready · ${size()}×${size()} board · no timer`; $('start-solo').disabled = loading; }
   catch (error) { $('configuration-status').textContent = error.message; $('start-solo').disabled = true; }
   const groups = ambiguousEntries(pool);
   $('ambiguity-warning').hidden = groups.length === 0;
   $('ambiguity-warning').replaceChildren();
   if (groups.length) $('ambiguity-warning').append(el('strong', {}, 'Some words look identical.'),
-    el('p', {}, 'Choose across sets and keep only one source entry for each visible word. Original Library records remain separate.'),
+    el('p', {}, 'Tap a word below to leave out one of the identical entries. Original Library records remain separate.'),
     el('ul', {}, ...groups.map(group => el('li', {}, `${group[0].chinese}: ${group.map(item => `${item.setId} / ${item.id} (${item.pinyin || 'no Pinyin'}; ${item.english || 'no meaning'})`).join(' · ')}`))));
 }
 
+// Vocabulary selector in the Build the Great Wall layout: sets grouped by year, each set's checkbox is its
+// "Choose all" (partial = indeterminate); the words of every chosen set appear as chips that can be left out.
 function renderSelection() {
   if (!selection) return;
   const focusKey = document.activeElement?.getAttribute('data-focus-key');
-  const custom = selection.mode === 'custom';
-  const set = catalogue.find(value => value.id === selection.setId);
-  // v0.1.1: "Choose all" for the set being browsed. Other sets' choices are untouched; partial = indeterminate.
-  const setState = setSelectionState(set, key => selection.has(key));
-  const chosenHere = (set?.items || []).filter(item => selection.has(item.key)).length;
-  const chooseAll = custom && set?.items.length ? el('label', { className: 'word-row choose-all-row' },
-    el('input', { type: 'checkbox', id: 'choose-all', 'data-focus-key': `choose-all:${set.id}`, checked: setState === 'all', indeterminate: setState === 'some',
-      'aria-label': `Choose all words in ${set.title}`,
-      onchange: event => { for (const item of set.items) selection.toggle(item.key, event.target.checked); renderSelection(); } }),
-    el('span', { className: 'word-text' }, el('strong', {}, 'Choose all'), el('small', {}, `${chosenHere} of ${set.items.length} in this set selected`))) : null;
-  $('word-list').replaceChildren(...[chooseAll].filter(Boolean), ...(set?.items || []).map(item => el('label', { className: 'word-row' },
-    el('input', { type: 'checkbox', 'data-focus-key': `select:${item.key}`, checked: custom ? selection.has(item.key) : true, disabled: !custom,
-      'aria-label': `Select ${item.chinese}, ${item.english}, from ${item.setId}`,
-      onchange: event => { selection.toggle(item.key, event.target.checked); renderSelection(); } }),
-    el('span', { className: 'word-text' }, el('strong', { lang: 'zh-Hans' }, item.chinese),
-      el('small', {}, [item.pinyin, item.english].filter(Boolean).join(' · '))))));
-  if (!set?.items.length) $('word-list').append(el('p', { className: 'help' }, 'No eligible words in this set. Choose another published set.'));
-  $('selection-summary').hidden = !custom;
-  $('selected-words').replaceChildren(...selection.items.map(item => el('button', {
-    type: 'button', className: 'word-chip', 'data-focus-key': `remove:${item.key}`, 'aria-label': `Remove ${item.chinese}, ${item.english}, from ${item.setId}`,
-    onclick: () => { selection.remove(item.key); renderSelection(); }
-  }, `${item.chinese} ×`, item.english ? el('small', {}, item.english) : null)));
-  if (custom && !selection.items.length) $('selected-words').append(el('p', { className: 'help' }, 'Choose words above. Your selection stays as you browse other sets.'));
+  const isSelected = key => selection.has(key);
+  const groups = new Map();
+  for (const set of catalogue) { const label = yearLabel(set.yearLevel); if (!groups.has(label)) groups.set(label, []); groups.get(label).push(set); }
+  if (!catalogue.length) $('set-picker').replaceChildren(el('p', { className: 'help' }, loading ? 'Loading…' : 'No Vocabulary Sets are available yet.'));
+  else $('set-picker').replaceChildren(...[...groups].map(([label, sets], index) => {
+    const heading = el('p', { className: 'set-group-title', id: `set-group-${index}` }, label);
+    return el('div', { className: 'set-group', role: 'group', 'aria-labelledby': heading.id }, heading, ...sets.map(set => {
+      const state = setSelectionState(set, isSelected), chosen = set.items.filter(item => isSelected(item.key)).length;
+      const name = el('span', {}, set.title);
+      if (chineseTitles.get(set.id)) name.append(' ', el('span', { lang: 'zh-Hans' }, chineseTitles.get(set.id)));
+      return el('label', { className: `set-option${state === 'some' ? ' partial' : ''}` },
+        el('input', { type: 'checkbox', value: set.id, 'data-focus-key': `set:${set.id}`, checked: state === 'all', indeterminate: state === 'some', disabled: loading,
+          onchange: event => { for (const item of set.items) selection.toggle(item.key, event.target.checked); renderSelection(); } }),
+        name, el('small', {}, state === 'some' ? `${chosen} of ${set.items.length} words` : `${set.items.length} words`));
+    }));
+  }));
+  $('set-picker').setAttribute('aria-busy', String(loading));
+  const chosenSets = catalogue.filter(set => set.items.some(item => isSelected(item.key)));
+  const pool = selection.items;
+  $('set-count').textContent = chosenSets.length ? `${chosenSets.length} set${chosenSets.length > 1 ? 's' : ''} selected · ${pool.length} word${pool.length === 1 ? '' : 's'} chosen` : '';
+  $('word-picker-area').hidden = !chosenSets.length;
+  $('word-picker').replaceChildren(...chosenSets.flatMap(set => set.items.map(item => {
+    const on = isSelected(item.key);
+    return el('button', { type: 'button', className: `word-chip${on ? ' selected' : ''}`, 'aria-pressed': String(on), 'data-focus-key': `word:${item.key}`,
+      'aria-label': `${item.chinese}, ${item.english || 'no meaning'}, from ${set.title}${on ? ', chosen' : ', left out'}`,
+      onclick: () => { selection.toggle(item.key, !on); renderSelection(); } },
+      el('strong', { lang: 'zh-Hans' }, item.chinese), item.english ? el('small', {}, item.english) : null);
+  })));
   updateValidation();
   if (focusKey) {
     const target = [...document.querySelectorAll('[data-focus-key]')].find(node => node.getAttribute('data-focus-key') === focusKey);
-    (target || $('clear-all')).focus({ preventScroll: true });
+    (target || $('set-picker').querySelector('input') || $('reload')).focus({ preventScroll: true });
   }
 }
 
 async function refreshCatalogue() {
   if (loading) return;
-  loading = true; $('reload').disabled = true; $('start-solo').disabled = true; $('source-controls').disabled = true;
+  loading = true; $('reload').disabled = true; $('start-solo').disabled = true; $('set-picker').querySelectorAll('input').forEach(input => { input.disabled = true; }); $('set-picker').setAttribute('aria-busy', 'true');
   $('load-status').textContent = 'Loading published vocabulary…';
   try {
     const result = await loadCatalogueWithTimeout();
     // Explicit reload preserves available custom identities and the browsed set.
-    const previous = selection, chosen = previous?.mode === 'custom' ? previous.items.map(item => item.key) : [];
-    catalogue = result.sets; selection = new VocabularySelection(catalogue);
+    // Sets in Build the Great Wall order (year, then title). A reload keeps every still-available chosen word;
+    // if nothing is chosen after a load, the first set is chosen, as Great Wall does.
+    const previous = selection, chosen = previous ? previous.items.map(item => item.key) : [];
+    catalogue = [...result.sets].filter(set => set.items.length).sort((a, b) => (Number(a.yearLevel) || 0) - (Number(b.yearLevel) || 0) || a.title.localeCompare(b.title));
+    chineseTitles = result.chineseTitles || new Map();
+    selection = new VocabularySelection(catalogue); selection.setMode('custom');
     const validKeys = new Set(catalogue.flatMap(set => set.items).map(item => item.key));
     chosen.filter(key => validKeys.has(key)).forEach(key => selection.toggle(key, true));
-    if (previous) { selection.setMode(previous.mode); if (catalogue.some(set => set.id === previous.setId)) selection.browse(previous.setId); }
+    if (!selection.items.length && catalogue.length) catalogue[0].items.forEach(item => selection.toggle(item.key, true));
     entries = new Map(catalogue.flatMap(set => set.items).map(item => [item.key, item]));
     images = new Map([...(result.images || new Map())].filter(([key]) => !brokenImages.has(key)));
-    $('set-picker').replaceChildren(...catalogue.map(set => el('option', { value: set.id }, `${Number(set.yearLevel) === 0 ? 'Prep' : `Year ${set.yearLevel}`} · ${set.title} (${set.items.length})`)));
-    $('set-picker').value = selection.setId;
-    $('source-controls').disabled = !catalogue.length;
     $('load-status').textContent = catalogue.length
-      ? `Published Library entries loaded. Offline loading may use the Library’s last successful cache for this Library.${result.diagnostics.length ? ` ${result.diagnostics.length} invalid entries excluded.` : ''}${chosen.some(key => !validKeys.has(key)) ? ' Some selected entries are no longer available and were removed.' : ''}`
+      ? `${catalogue.length} published Vocabulary Sets.${chosen.some(key => !validKeys.has(key)) ? ' Some chosen words are no longer available and were removed.' : ''}`
       : 'No vocabulary is available right now. The Library may be empty or unreachable. Check your connection and tap Reload vocabulary; ask your teacher if this continues.';
     $('boot-retry').hidden = catalogue.length > 0;
     if (result.diagnostics.length) $('load-status').title = result.diagnostics.join('\n');
   } catch {
     $('load-status').textContent = 'Could not finish loading the Vocabulary Library. Check your connection and tap Reload vocabulary. Any previous selection is kept.';
-    $('source-controls').disabled = !catalogue.length;
     $('boot-retry').hidden = false;
   } finally { loading = false; $('reload').disabled = false; renderSelection(); }
 }
@@ -139,7 +156,7 @@ function renderGame() {
   $('listen-word').disabled = !active; $('next-word').disabled = !active;
   $('result').hidden = active;
   if (!active) {
-    player.cancel();
+    stopAudio();
     $('result-title').textContent = game.status === 'won' ? (game.winningMode === 'line' ? 'Bingo! ★' : 'Full House! ★') : game.status === 'practice-complete' ? 'Practice complete!' : 'All words called';
   }
 }
@@ -150,12 +167,13 @@ function prefetchWords() {
   const upcoming = game.sequence[game.round];
   if (upcoming) player.prepare(entries.get(upcoming));
 }
+function stopAudio() { player.cancel(); audioBusySince = null; }
 function cancelAdvance() { if (advanceTimer !== null) { clearTimeout(advanceTimer); advanceTimer = null; } }
 // Moves to the next word exactly once. autoplay=true only from a correct answer (or Listen during the pause).
 function advance({ autoplay }) {
   cancelAdvance();
   if (!game || game.status !== 'playing') return;
-  player.cancel(); game = nextSoloWord(game); renderGame(); feedback('');
+  stopAudio(); game = nextSoloWord(game); renderGame(); feedback('');
   if (game.status !== 'playing') { $('audio-status').textContent = 'All words called.'; return; }
   prefetchWords();
   $('audio-status').classList.remove('warning');
@@ -163,7 +181,7 @@ function advance({ autoplay }) {
   else $('audio-status').textContent = 'Tap Listen Word for the next word.';
 }
 function submitAnswer(cellKey) {
-  if (!game || advanceTimer !== null) return; // The answered word is locked during the short pause.
+  if (!game || advanceTimer !== null || onBreak()) return; // The answered word is locked during the short pause.
   // Snapshot round with each intent; the pure transition rejects stale submissions.
   const round = game.round, attemptId = `solo-${++attemptNumber}`;
   const result = answerSolo(game, { cellKey, attemptId, round }); game = result.state;
@@ -185,9 +203,10 @@ function submitAnswer(cellKey) {
   }
 }
 function startGame() {
+  if (onBreak()) return;
   try { game = createSoloGame(selection.items, { size: size(), winningMode: winningMode() }); }
   catch (error) { $('configuration-status').textContent = error.message; return; }
-  cancelAdvance(); player.cancel(); attemptNumber = 0;
+  cancelAdvance(); stopAudio(); attemptNumber = 0;
   $('setup').hidden = true; $('game').hidden = false;
   $('audio-status').textContent = 'Tap Listen Word to begin. Replays cost no stars.';
   $('audio-status').classList.remove('warning');
@@ -196,19 +215,41 @@ function startGame() {
   $('game-title').focus();
 }
 $('reload').addEventListener('click', refreshCatalogue);
-$('set-picker').addEventListener('change', event => { selection.browse(event.target.value); renderSelection(); });
-document.querySelectorAll('input[name="selection-mode"]').forEach(control => control.addEventListener('change', event => { selection.setMode(event.target.value); renderSelection(); }));
 document.querySelectorAll('input[name="size"]').forEach(control => control.addEventListener('change', updateValidation));
-$('winning-mode').addEventListener('change', updateValidation);
 $('clear-all').addEventListener('click', () => { selection.clear(); renderSelection(); });
 $('start-solo').addEventListener('click', startGame);
-$('restart').addEventListener('click', startGame);
+$('restart').addEventListener('click', startGame);   // startGame refuses during a break
+// Every deliberate Listen tap is counted (including taps ignored while a word is still playing);
+// automatic playback after a correct answer is not. TAP_LIMIT taps in WINDOW_MS start a Listening Break.
 $('listen-word').addEventListener('click', () => {
   if (!game || game.status !== 'playing') return;
+  const verdict = guard.tap();
+  if (verdict === 'break') { startBreak(); return; }
+  if (verdict === 'blocked') return;
   if (advanceTimer !== null) advance({ autoplay: true }); // During the pause, Listen means "the next word, now".
-  else player.play(entries.get(game.currentKey));
+  else if (!audioBusy()) player.play(entries.get(game.currentKey)); // an overlapping request is ignored
 });
-$('next-word').addEventListener('click', () => { if (game) advance({ autoplay: false }); });
+$('next-word').addEventListener('click', () => { if (game && !onBreak()) advance({ autoplay: false }); });
+
+// Listening Break: a full-page overlay. Audio stops, a pending auto-advance is cancelled, every control is
+// blocked; the board, progress and stars are untouched. It ends by itself (no audio on unlock).
+function startBreak() { cancelAdvance(); stopAudio(); showBreak(); }
+function showBreak() {
+  for (const node of [document.querySelector('header'), $('main'), document.querySelector('footer')]) if (node) node.inert = true;
+  $('listen-break').hidden = false; $('break-title').focus({ preventScroll: true });
+  tickBreak(); if (breakTimer === null) breakTimer = setInterval(tickBreak, 250);
+}
+function tickBreak() {
+  if (!guard.active()) { endBreak(); return; }
+  $('break-count').textContent = String(Math.ceil(guard.remainingMs() / 1000));
+}
+function endBreak() {
+  if (breakTimer !== null) { clearInterval(breakTimer); breakTimer = null; }
+  for (const node of [document.querySelector('header'), $('main'), document.querySelector('footer')]) if (node) node.inert = false;
+  $('listen-break').hidden = true;
+  if (game && !$('game').hidden) { $('audio-status').textContent = 'Tap Listen when you are ready.'; $('listen-word').focus({ preventScroll: true }); }
+}
+document.addEventListener('visibilitychange', () => { if (breakTimer !== null) tickBreak(); });
 // v0.1.1 display options: change only what the cells show (never the board, the word, the answer checks or stars).
 function renderDisplayOptions() {
   const last = enabledCount(display) === 1;
@@ -224,6 +265,7 @@ for (const name of DISPLAY_ORDER) $(`display-${name}`).addEventListener('change'
   display = toggleDisplay(display, name, event.target.checked);
   if (game) renderGame(); else renderDisplayOptions();
 });
-$('change-words').addEventListener('click', () => { cancelAdvance(); player.cancel(); game = null; $('game').hidden = true; $('setup').hidden = false; $('start-solo').focus(); });
-window.addEventListener('pagehide', () => { cancelAdvance(); player.cancel(); });
+$('change-words').addEventListener('click', () => { if (onBreak()) return; cancelAdvance(); stopAudio(); game = null; $('game').hidden = true; $('setup').hidden = false; $('start-solo').focus(); });
+window.addEventListener('pagehide', () => { cancelAdvance(); stopAudio(); });
 refreshCatalogue();
+if (onBreak()) showBreak();   // a reload does not skip the rest of a Listening Break
