@@ -138,7 +138,8 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     const tray = $('tray'), box = tray.getBoundingClientRect(), portrait = box.width > box.height * 1.4;
     const h = S * H, gap = 10;
     let scale;
-    if (portrait) scale = Math.min(0.85, (box.height - 28) / (h * 1.04));
+    // D3: measure the room left under the tray header and play hint (the hint can wrap), not a fixed 28 px.
+    if (portrait) { const used = $('tray-list').getBoundingClientRect().top - box.top; scale = Math.min(0.85, (box.height - used - 12) / (h * 1.04)); }
     else { const inner = box.width - 24, cols = Math.max(1, Math.floor((inner + gap) / (0.72 * S + gap))); scale = Math.min(0.85, (inner - (cols - 1) * gap) / cols / S); }
     tray.style.setProperty('--piece-w', `${(S * scale).toFixed(1)}px`);
     tray.style.setProperty('--piece-h', `${(h * scale * 1.02).toFixed(1)}px`);
