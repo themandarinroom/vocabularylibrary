@@ -47,24 +47,43 @@ export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine, f
   font(700, 38); ctx.fillStyle = CARD.ok; ctx.textAlign = 'right'; ctx.fillText('Completed ✓', W - M, y + 10); ctx.textAlign = 'left';
   ctx.strokeStyle = CARD.rule; ctx.beginPath(); ctx.moveTo(M, M + 130); ctx.lineTo(W - M, M + 130); ctx.stroke();
 
-  // Details column.
-  y = M + 200;
-  const rows = [['Name', record.student?.firstName || '—'], ['Class', record.student?.className || '—'], ['Date', formatDate(record.completedAt)],
-    ['Vocabulary', record.vocabularySets.map(s => s.title).join(', ')], ['Puzzle', puzzleLine || record.difficulty?.label || ''],
-    ['Matching', record.matchingMode.label], ['Matches', `${record.matchesCompleted} of ${record.matchesCompleted} ✓`]];
-  for (const [label, value] of rows) {
-    font(500, 30); ctx.fillStyle = CARD.muted; ctx.fillText(label, M, y);
-    font(650, 31); ctx.fillStyle = CARD.ink;
-    for (const line of wrapLines(value, TW - 180, measureAt(650, 31))) { ctx.fillText(line, M + 180, y); y += 42; }
-    y += 10;
-  }
-  y += 18;
-  for (const [title, text] of [['Learning intention', record.learningIntention], ['Success criteria', record.successCriteria]]) {
-    font(750, 29); ctx.fillStyle = CARD.accent; ctx.fillText(title, M, y); y += 42;
-    font(500, 30); ctx.fillStyle = CARD.ink;
-    for (const line of wrapLines(text, TW, measureAt(500, 30))) { ctx.fillText(line, M, y); y += 40; }
-    y += 22;
-  }
+  // Details column. D3: optional Level (under Puzzle) and Time taken (under Matches). The column is measured first;
+  // if long set names would push the success criteria into the footer, spacing and type shrink in small steps
+  // (never below 80 %), so nothing is clipped or overlapped.
+  const titles = record.vocabularySets.map(s => s.title);
+  const vocabulary = keep => keep >= titles.length ? titles.join(', ') : `${titles.slice(0, keep).join(', ')} + ${titles.length - keep} more ${titles.length - keep === 1 ? 'set' : 'sets'}`;
+  let rows;
+  const setRows = keep => { rows = [['Name', record.student?.firstName || '—'], ['Class', record.student?.className || '—'], ['Date', formatDate(record.completedAt)],
+    ['Vocabulary', vocabulary(keep)], ['Puzzle', puzzleLine || record.difficulty?.label || ''],
+    ...(record.level?.label ? [['Level', record.level.label]] : []),
+    ['Matching', record.matchingMode.label], ['Matches', `${record.matchesCompleted} of ${record.matchesCompleted} ✓`],
+    ...(record.timeTaken?.text ? [['Time taken', record.timeTaken.text]] : [])]; };
+  const footerTop = H - M - 40 - 30;
+  const column = (f, draw) => {
+    let cy = M + 200;
+    for (const [label, value] of rows) {
+      if (draw) { font(500, 30 * f); ctx.fillStyle = CARD.muted; ctx.fillText(label, M, cy); }
+      font(650, 31 * f); ctx.fillStyle = CARD.ink;
+      for (const line of wrapLines(value, TW - 180, measureAt(650, 31 * f))) { if (draw) ctx.fillText(line, M + 180, cy); cy += 42 * f; }
+      cy += 10 * f;
+    }
+    cy += 18 * f;
+    for (const [title, body] of [['Learning intention', record.learningIntention], ['Success criteria', record.successCriteria]]) {
+      if (draw) { font(750, 29 * f); ctx.fillStyle = CARD.accent; ctx.fillText(title, M, cy); }
+      cy += 42 * f;
+      font(500, 30 * f); ctx.fillStyle = CARD.ink;
+      for (const line of wrapLines(body, TW, measureAt(500, 30 * f))) { if (draw) ctx.fillText(line, M, cy); cy += 40 * f; }
+      cy += 22 * f;
+    }
+    return cy - 22 * f; // baseline area of the last line
+  };
+  // 1) full size; 2) shrink spacing and type in steps to 80 %; 3) only if a very long list of sets still does not fit,
+  // list as many full set names as fit and add "+ N more sets" (no name is cut; nothing overlaps the footer).
+  let fit = 1, keep = titles.length;
+  setRows(keep);
+  for (const f of [1, 0.95, 0.9, 0.85, 0.8]) { fit = f; if (column(f, false) <= footerTop) break; }
+  while (column(fit, false) > footerTop && keep > 1) setRows(--keep);
+  column(fit, true);
   font(500, 23); ctx.fillStyle = CARD.muted;
   wrapLines(record.statement, TW, measureAt(500, 23)).forEach((line, i) => ctx.fillText(line, M, H - M - 40 + i * 30));
   ctx.restore();
@@ -72,5 +91,5 @@ export function drawRecordCard(ctx, record, { emblem, drawContent, puzzleLine, f
   // Activity-specific content (the completed puzzle) on the right: D1 gives it most of the card.
   const box = { x: M + TW + 36, y: M + 146, w: W - (M + TW + 36) - M + 10, h: H - (M + 146) - M + 14 };
   ctx.save(); ctx.setTransform(k, 0, 0, k, 0, 0); drawContent(ctx, box); ctx.restore();
-  return box;
+  return { ...box, fit, setsListed: keep }; // fit: details-column scale used (1 = full size); setsListed: names shown in full
 }

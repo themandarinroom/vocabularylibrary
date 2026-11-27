@@ -9,6 +9,15 @@ export const STATEMENT = 'This record shows that the activity was completed succ
 // D2: A5 is the approved default record format (A6 stays available as a compact option, see learning-record-export/card.mjs).
 export const EXPORT_FORMAT = Object.freeze({ type: 'image/png', width: 2480, height: 1748, paper: 'A5 landscape', dpi: 300, background: '#ffffff' });
 
+// "4 min 32 sec" · "45 sec" · "1 hr 5 min" — whole seconds, rounded down; no scores or speed judgements.
+export function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) throw new Error('A duration must be a non-negative number of milliseconds.');
+  const total = Math.floor(ms / 1000), h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  if (h) return `${h} hr ${m} min`;
+  if (m) return `${m} min ${s} sec`;
+  return `${s} sec`;
+}
+
 const text = (value, max) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
 const localDate = date => {
   const d = date instanceof Date ? date : new Date(date);
@@ -28,6 +37,8 @@ const localDate = date => {
  * @param {string} input.learningIntention        what the activity practises (derived from the game's mode)
  * @param {string} input.successCriteria          how completion is judged, e.g. 'I can complete a Tarsia puzzle by correctly matching all 18 vocabulary pairs.'
  * @param {object} input.content                   game-specific snapshot of the finished activity (e.g. the solved puzzle)
+ * @param {{id:string,label:string}} [input.level]  optional student level (Tarsia: Beginner / Master)
+ * @param {number} [input.timeTakenMs]              optional time from the puzzle being ready to its completion
  */
 export function buildCompletionRecord(input) {
   const required = ['activity', 'completedAt', 'vocabularySets', 'difficulty', 'matchingMode', 'learningIntention', 'successCriteria', 'content'];
@@ -50,6 +61,8 @@ export function buildCompletionRecord(input) {
     matchesCompleted: input.matchesCompleted,
     learningIntention: input.learningIntention,
     successCriteria: input.successCriteria,
+    ...(input.level ? { level: Object.freeze({ id: input.level.id, label: input.level.label }) } : {}),
+    ...(input.timeTakenMs !== undefined && input.timeTakenMs !== null ? { timeTaken: Object.freeze({ ms: Math.max(0, Math.round(input.timeTakenMs)), text: formatDuration(input.timeTakenMs) }) } : {}),
     completionStatus: 'completed',
     statement: STATEMENT,
     content: input.content

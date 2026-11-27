@@ -1,10 +1,10 @@
 // Tarsia → shared Evidence of Learning record. Only built from a state the engine judges complete.
 import { buildCompletionRecord } from '../../learning-record/record.mjs';
 import { getTemplate } from './templates.mjs';
-import { getMode, getLevel, successCriteria } from './modes.mjs';
+import { getMode, getLevel, successCriteria, levelForMode } from './modes.mjs';
 import { checkCompletion, labelAt } from './validate.mjs';
 
-export function tarsiaCompletionRecord(puzzle, state, { vocabularySets, student, completedAt = new Date() }) {
+export function tarsiaCompletionRecord(puzzle, state, { vocabularySets, student, completedAt = new Date(), timeTakenMs }) {
   const template = getTemplate(puzzle.templateId);
   const verdict = checkCompletion(puzzle, state, template);
   if (!verdict.complete) throw new Error('A learning record can only be made for a completed puzzle.');
@@ -19,6 +19,8 @@ export function tarsiaCompletionRecord(puzzle, state, { vocabularySets, student,
     completedAt, student, vocabularySets,
     difficulty: { id: level.id, label: level.label },
     matchingMode: { id: mode.id, label: mode.label },
+    level: levelForMode(mode.id) ? { id: levelForMode(mode.id).id, label: levelForMode(mode.id).label } : undefined,
+    timeTakenMs,
     matchesCompleted: template.requiredPairs,
     learningIntention: mode.learningIntention,
     successCriteria: successCriteria(template.requiredPairs),

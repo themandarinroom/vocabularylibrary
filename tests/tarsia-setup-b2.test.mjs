@@ -25,16 +25,23 @@ test('covers pass through for display only when https; sets grouped by year', ()
   assert.deepEqual(setGroups(sets).map(g => [g.label, g.sets.map(s => s.id)]), [['Year 1', ['pets']], ['Year 5', ['c1', 'c2', 'c3', 'sp']]]);
 });
 
-test('four shapes, no Beginner/Master labels, all five modes offered for any shape', () => {
+test('four shapes at both levels; levels choose the matching mode only (D3: Beginner = Pinyin modes, Master = Hanzi modes)', () => {
   const v = setupView(sets, { setIds: ['c1', 'c2', 'c3'], templateId: 'hexagon-10', modeId: 'hanzi-picture' });
   assert.deepEqual(v.shapes.map(s => [s.templateId, s.name, s.pieceCount, s.requiredPairs]),
     [['small-triangle-4', 'Small Triangle', 4, 3], ['hexagon-6', 'Hexagon', 6, 6], ['triangle-9', 'Triangle', 9, 9], ['hexagon-10', 'Extended Hexagon', 10, 11]]);
   assert.ok(v.shapes.every(s => s.requiredPairs <= 12));
   assert.equal(v.modes.length, 5);
   assert.ok(v.modes.every(m => m.available));
-  assert.equal(v.summary, '25 words · Extended Hexagon (10 pieces · 11 pairs) · Hanzi + Picture');
+  assert.equal(v.summary, '25 words · Extended Hexagon (10 pieces · 11 pairs) · Master · Hanzi + Picture');
   assert.deepEqual(v.start, { setIds: ['c1', 'c2', 'c3'], templateId: 'hexagon-10', modeId: 'hanzi-picture' });
-  assert.doesNotMatch(JSON.stringify(v), /Beginner|Master/);
+  assert.equal(v.level, 'master');
+  assert.deepEqual(v.levels.map(l => [l.id, l.label, l.selected, l.modes.map(m => m.modeId)]),
+    [['beginner', 'Beginner', false, ['pinyin-picture', 'pinyin-english']], ['master', 'Master', true, ['hanzi-english', 'hanzi-pinyin', 'hanzi-picture']]]);
+  // the level never limits the shapes: the same four shapes for a Beginner mode
+  const b = setupView(sets, { setIds: ['c1', 'c2', 'c3'], templateId: 'hexagon-10', modeId: 'pinyin-picture' });
+  assert.equal(b.level, 'beginner');
+  assert.deepEqual(b.shapes.map(s => s.templateId), v.shapes.map(s => s.templateId));
+  assert.ok(!v.shapes.some(s => s.templateId === 'triangle-16'), 'deferred 18-pair template stays hidden');
 });
 
 test('a single set can play smaller shapes in every mode', () => {
@@ -65,10 +72,11 @@ test('same-meaning rule still applies in setup counts (澳大利亚 / 澳洲)', 
   assert.equal(v.modes.find(m => m.modeId === 'hanzi-pinyin').usable, 10);
 });
 
-test('no sets chosen; defaults; URL round trip', () => {
+test('no sets chosen; defaults (D3: Beginner · Pinyin + Picture); URL round trip', () => {
+  assert.equal(setupView(sets, {}).level, 'beginner');
   const v = setupView(sets, {});
   assert.equal(v.feedback.kind, 'no-sets');
-  assert.deepEqual(normaliseSelection(sets, { setIds: ['c1', 'nope', 'c1'], templateId: 'triangle-16', modeId: 'x' }), { setIds: ['c1'], templateId: 'hexagon-6', modeId: 'pinyin-english' });
+  assert.deepEqual(normaliseSelection(sets, { setIds: ['c1', 'nope', 'c1'], templateId: 'triangle-16', modeId: 'x' }), { setIds: ['c1'], templateId: 'hexagon-6', modeId: 'pinyin-picture' });
   const p = selectionToParams({ setIds: ['c1', 'c3'], templateId: 'triangle-9', modeId: 'hanzi-english' });
   assert.equal(p.toString(), 'set=c1%2Cc3&shape=triangle-9&mode=hanzi-english');
   assert.deepEqual(selectionFromParams(p), { setIds: ['c1', 'c3'], templateId: 'triangle-9', modeId: 'hanzi-english' });

@@ -2,12 +2,14 @@
 // All rules live in setup-model.mjs and the engine; this file only draws and listens.
 import { loadCatalogueWithTimeout } from '../vocabulary-games-core/library.mjs';
 import { setupView, setGroups, selectionFromParams, selectionToParams } from './setup-model.mjs';
-import { getTemplate, cellCorners, randomSeed } from './engine/index.mjs';
+import { getTemplate, cellCorners, randomSeed, MATCH_LEVELS, levelForMode } from './engine/index.mjs';
+import { mergeSets } from '../vocabulary-games-core/vocabulary.mjs';
 import { devImageRelay } from './dev-relay.mjs';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 let sets = [], selection = selectionFromParams(new URLSearchParams(location.search)), view = null;
+const lastMode = {}; // the matching mode last chosen in each level, restored when the student switches back
 
 // ---------- Vocabulary (read-only, through the shared Library loader) ----------
 async function load() {
@@ -28,8 +30,8 @@ async function load() {
   } finally { console.warn = warn; $('sets').setAttribute('aria-busy', 'false'); }
   render();
   // Bring the first chosen set into view inside the set list (not the page), e.g. after following a shared link.
-  const first = document.querySelector('.set-card:has(input:checked)'), list = $('sets');
-  if (first) list.scrollTop = first.offsetTop - 8; // .set-cards is the offset parent
+  const first = document.querySelector('.set-option:has(input:checked)'), list = $('sets');
+  if (first) list.scrollTop = first.offsetTop - list.offsetTop - 8;
 }
 
 // ---------- Drawing ----------
@@ -46,22 +48,30 @@ function render() {
   view = setupView(sets, selection);
   selection = view.selection;
   const chosen = new Set(selection.setIds);
-  $('sets').innerHTML = sets.length ? setGroups(sets).map(g => `<p class="year-title">${esc(g.label)}</p><div class="card-grid">${g.sets.map(s => `
-    <label class="set-card"><input class="choice-input" type="checkbox" name="set" value="${esc(s.id)}" ${chosen.has(s.id) ? 'checked' : ''}>
-      <span class="tz-cover">${s.cover ? `<img src="${esc(s.cover)}" alt="" loading="lazy" decoding="async">` : '<span class="tz-placeholder" lang="zh-Hans" aria-hidden="true">词</span>'}</span>
-      <span class="meta"><strong>${esc(s.title)}</strong>${s.chineseTitle ? `<span class="zh" lang="zh-Hans">${esc(s.chineseTitle)}</span>` : ''}<small>${s.items.length} words</small></span>
-      <span class="tick" aria-hidden="true">✓</span></label>`).join('')}</div>`).join('') : '<p class="help">No Vocabulary Sets yet.</p>';
-  $('chosen-badge').textContent = `${view.setCount} chosen`;
-  $('set-summary').textContent = view.setCount ? `${view.setCount} ${view.setCount === 1 ? 'set' : 'sets'} · ${view.words} different words${view.duplicates ? ` (${view.duplicates} repeated, counted once)` : ''}` : '';
+  // D3: the same vocabulary selector as Build the Great Wall — sets grouped by year in one scrolling list,
+  // a "sets selected · different words" line and a preview of the chosen words.
+  $('sets').innerHTML = sets.length ? setGroups(sets).map((g, i) => `<div class="set-group" role="group" aria-labelledby="set-group-${i}"><p class="set-group-title" id="set-group-${i}">${esc(g.label)}</p>${g.sets.map(s => `
+    <label class="set-option"><input type="checkbox" name="set" value="${esc(s.id)}" ${chosen.has(s.id) ? 'checked' : ''}>
+      <span>${esc(s.title)}${s.chineseTitle ? ` <span lang="zh-Hans">${esc(s.chineseTitle)}</span>` : ''}</span><small>${mergeSets(sets, [s.id]).entries.length} words</small></label>`).join('')}</div>`).join('') : '<p class="help">No Vocabulary Sets yet.</p>';
+  $('set-summary').textContent = view.setCount ? `${view.setCount} ${view.setCount === 1 ? 'set' : 'sets'} selected · ${view.words} different words${view.duplicates ? ` (${view.duplicates} repeated, counted once)` : ''}` : '';
+  $('set-preview').innerHTML = view.preview.map(w => `<span class="word-chip"><strong lang="zh-Hans">${esc(w.chinese)}</strong>${w.english ? `<small>${esc(w.english)}</small>` : ''}</span>`).join('')
+    + (view.words > view.preview.length ? `<span class="help">+ ${view.words - view.preview.length} more</span>` : '');
 
   $('shapes').innerHTML = '<legend class="sr-only">Puzzle shape</legend>' + view.shapes.map(sh => `
     <label class="choice shape-choice${sh.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="shape" value="${sh.templateId}" ${sh.selected ? 'checked' : ''}>${shapeIcon(sh.templateId, 70, 60)}
       <span><strong>${esc(sh.name)}</strong><small>${sh.pieceCount} pieces · ${sh.requiredPairs} word pairs</small>${sh.available || !view.setCount ? '' : `<small class="need">${esc(sh.reason)}</small>`}</span></label>`).join('');
 
-  $('modes').innerHTML = '<legend class="sr-only">Matching</legend>' + view.modes.map(m => `
-    <label class="mode${m.available ? '' : ' unavailable'}"><input class="choice-input" type="radio" name="mode" value="${m.modeId}" ${m.selected ? 'checked' : ''}>
-      <span class="mode-top"><strong>${esc(m.label)}</strong><span class="count ${m.available ? 'ok' : 'short'}">${m.available ? `${m.usable} words ready` : `${m.usable} of ${m.required} words`}</span></span>
-      ${m.example ? `<span class="example" aria-hidden="true">${part(m.example[0])}<span class="pair-line"></span>${part(m.example[1])}</span>` : ''}</label>`).join('');
+  // D3: "Choose a level". Each level card has its own matching dropdown; only the chosen level's dropdown is shown.
+  const optionText = m => `${m.label} · ${m.available ? `${m.usable} words ready` : `${m.usable} of ${m.required} words`}`;
+  const chosenMode = view.modes.find(m => m.selected);
+  $('levels').innerHTML = '<legend class="sr-only">Level</legend>' + view.levels.map(l => `
+    <div class="level-card tz-level${l.selected ? ' chosen' : ''}">
+      <label class="level-pick"><input type="radio" name="level" value="${l.id}" ${l.selected ? 'checked' : ''}>
+        <span><strong>${esc(l.label)} <span lang="zh-Hans">${esc(l.chinese)}</span></strong><small>${esc(l.modes.map(m => m.label).join(' · '))}</small></span></label>
+      <label class="level-mode" ${l.selected ? '' : 'hidden'}><span class="field-label">Matching</span>
+        <select name="mode" aria-label="${esc(l.label)} matching">${l.modes.map(m => `<option value="${m.modeId}" ${m.selected ? 'selected' : ''}>${esc(optionText(m))}</option>`).join('')}</select></label>
+      ${l.selected && chosenMode?.example ? `<span class="example" aria-hidden="true">${part(chosenMode.example[0])}<span class="pair-line"></span>${part(chosenMode.example[1])}</span>` : ''}
+    </div>`).join('');
 
   const f = view.feedback;
   $('setup-feedback').innerHTML = !f || !sets.length ? '' : `<div class="tz-feedback">${f.kind === 'too-few'
@@ -100,12 +110,13 @@ function hero() {
 document.addEventListener('change', event => {
   const input = event.target;
   if (input.name === 'set') selection = { ...selection, setIds: input.checked ? [...selection.setIds, input.value] : selection.setIds.filter(id => id !== input.value) };
-  else if (input.name === 'mode') selection = { ...selection, modeId: input.value };
+  else if (input.name === 'mode') { selection = { ...selection, modeId: input.value }; lastMode[levelForMode(input.value).id] = input.value; }
+  else if (input.name === 'level') selection = { ...selection, modeId: lastMode[input.value] || MATCH_LEVELS[input.value].modes[0] };
   else if (input.name === 'shape') selection = { ...selection, templateId: input.value };
   else return;
   render();
   // Keep keyboard focus on the control the student just used.
-  document.querySelector(`input[name="${input.name}"][value="${CSS.escape(input.value)}"]`)?.focus({ preventScroll: true });
+  (input.name === 'mode' ? document.querySelector('.level-mode:not([hidden]) select') : document.querySelector(`input[name="${input.name}"][value="${CSS.escape(input.value)}"]`))?.focus({ preventScroll: true });
 });
 document.addEventListener('click', event => {
   const add = event.target.closest('[data-add]');
@@ -125,9 +136,9 @@ async function start() {
     document.body.classList.remove('playing', 'puzzle-complete'); render(); $('start').focus({ preventScroll: true }); };
   workspace = await openWorkspace({ puzzle, template: template(puzzle.templateId), sets: chosen.map(s => ({ id: s.id, title: s.title, chineseTitle: s.chineseTitle })),
     onExit: leave,
-    onComplete: async ({ puzzle: done, state, sets: recordSets }) => {
+    onComplete: async ({ puzzle: done, state, sets: recordSets, timeTakenMs }) => {
       const { openCompletionPanel } = await import('./completion-panel.mjs');
-      completion = openCompletionPanel({ puzzle: done, state, sets: recordSets, rewrite: devImageRelay(),
+      completion = openCompletionPanel({ puzzle: done, state, sets: recordSets, timeTakenMs, rewrite: devImageRelay(),
         onPlayAgain: () => { leave(); start(); }, onSetup: leave });
     } });
   window.__tarsiaWorkspace = workspace; // diagnostics only

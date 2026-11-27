@@ -21,11 +21,12 @@ export function completionSummary(record) {
  * @param {{ puzzle, state, sets: {id,title,chineseTitle}[], completedAt?: Date, rewrite?: (url:string)=>string,
  *           onPlayAgain: ()=>void, onSetup: ()=>void }} options
  */
-export function openCompletionPanel({ puzzle, state, sets, completedAt = new Date(), rewrite, onPlayAgain, onSetup }) {
+export function openCompletionPanel({ puzzle, state, sets, completedAt = new Date(), timeTakenMs, rewrite, onPlayAgain, onSetup }) {
   const ac = new AbortController(), on = { signal: ac.signal };
   const panel = $('complete-panel');
   let images = null, emblem = null, blob = null, previewUrl = null, fallbackUrl = null, timer = null, closed = false, renderToken = 0;
-  const record = student => tarsiaCompletionRecord(puzzle, state, { vocabularySets: sets, student, completedAt });
+  // timeTakenMs is frozen at completion by the workspace, so every export of this record shows the same time.
+  const record = student => tarsiaCompletionRecord(puzzle, state, { vocabularySets: sets, student, completedAt, timeTakenMs });
   const base = record({});
   $('cp-summary').textContent = completionSummary(base);
   $('cp-name').value = ''; $('cp-class').value = '';

@@ -1,9 +1,9 @@
-// Tarsia Puzzle workspace (Phase B3.1 prototype). Draws the engine state and turns touch/mouse input into engine
-// actions. The engine state is the only source of truth; the board and tray are redrawn from it after every action.
+// Tarsia Puzzle workspace. Draws the engine state and turns taps, long presses and keys into engine actions
+// (D3, 27 Nov 2026: tap only — no dragging). The engine state is the only source of truth; the board and tray are redrawn from it after every action.
 import { rotatePiece, placePiece, removePiece, resetState, edgeStatuses, cellCorners, cellCentroid, cellEdge,
   createRandom, wordBank, tarsiaCompletionRecord, H } from './engine/index.mjs';
 import { layoutPiece, placeLabel } from './label-layout.mjs';
-import { progressOf, shuffleTray, hasProgress, puzzleInfo, tapPiece, tapSlot, slotNeighbour, pieceDescription, slotDescription } from './workspace-model.mjs';
+import { progressOf, shuffleTray, hasProgress, puzzleInfo, tapPiece, tapSlot, boardTapAction, LONG_PRESS_MS, slotNeighbour, pieceDescription, slotDescription } from './workspace-model.mjs';
 import { createGesture } from './gesture.mjs';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -34,8 +34,11 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
   const pictures = await loadPictures(puzzle);
   const random = createRandom(puzzle.seed ^ 0x5f3759df);
   const pieceById = new Map(puzzle.pieces.map(p => [p.id, p]));
-  let state = resetState(puzzle), S = 0, layouts = new Map(), origin = { x: 0, y: 0 }, drag = null, completed = false, broken = new Set();
-  let interaction = 'drag', selected = null; // Tap-to-place: tap selects, Turn button rotates
+  let state = resetState(puzzle), S = 0, layouts = new Map(), origin = { x: 0, y: 0 }, completed = false, broken = new Set();
+  let selected = null;                         // the tray piece chosen by a tap (or Enter), waiting for a space
+  // Completion time (D3): starts when the board is ready to play, stops at the completing move, then stays frozen.
+  // Word Bank time counts (the puzzle is still in progress); setup, name/class, record making and saving do not.
+  let startedAt = null, timeTakenMs = null;
   let cursorSlot = null, focusAfter = null;   // keyboard: space cursor and the element to refocus after a redraw
   const say = text => { $('kb-status').textContent = ''; requestAnimationFrame(() => { $('kb-status').textContent = text; }); };
   const describe = id => pieceDescription(pieceById.get(id), words);
@@ -153,97 +156,76 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     $('progress-bar').style.width = `${(100 * pr.matched / pr.total).toFixed(1)}%`;
     $('progress').setAttribute('aria-valuenow', pr.matched); $('progress').setAttribute('aria-valuemax', pr.total);
     if (pr.complete && !completed) {
-      completed = true; selected = null; updateTapTools();
+      completed = true; selected = null;
+      timeTakenMs = startedAt === null ? 0 : Math.round(performance.now() - startedAt);
       document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
       $('complete-note').hidden = false;
       $('complete-note').innerHTML = `All ${pr.total} word pairs are matched. Puzzle complete! <button id="record-open" type="button" class="tool-button">Learning record</button>`;
       document.body.classList.add('puzzle-complete');
       // Phase C listens for this to build the Evidence of Learning (data only; nothing is sent anywhere).
-      document.dispatchEvent(new CustomEvent('tarsia:complete', { detail: tarsiaCompletionRecord(puzzle, state, { vocabularySets: sets }) }));
-      onComplete?.({ puzzle, state, sets }); // completion experience (C2): opens the learning-record panel
+      document.dispatchEvent(new CustomEvent('tarsia:complete', { detail: tarsiaCompletionRecord(puzzle, state, { vocabularySets: sets, timeTakenMs }) }));
+      onComplete?.({ puzzle, state, sets, timeTakenMs }); // completion experience (C2): opens the learning-record panel
     }
   }
 
-  // ---------- Input: tap turns, drag moves (pointer events, touch-safe) ----------
-  const ghost = $('drag-ghost');
-  const capture = (el, id) => { try { el.setPointerCapture?.(id); } catch { /* pointer already gone: carry on without capture */ } };
+  // ---------- Input (D3): tap only ----------
+  // Tray: tap a piece to select it (tap again to cancel). Board: tap an empty space to place the selected piece (with
+  // the geometric orientation turn); tap a placed piece to turn it 120°; hold it ~0.5 s to send it back to the tray.
+  // With a tray piece selected, tapping a placed piece does nothing to it (no accidental turn or replacement).
   function apply(result) { if (result.ok) state = result.state; render(); return result; }
-  function nearestSlot(c) {
-    let best = null, bestD = S * 0.5;
-    for (const slot of template.slots) { const p = slotCentre(slot.id), d = Math.hypot(p.x - c.x, p.y - c.y); if (d < bestD) { best = slot.id; bestD = d; } }
-    return best;
-  }
-  function boardPoint(clientX, clientY) {
-    const pt = $('board').createSVGPoint(); pt.x = clientX; pt.y = clientY;
-    return pt.matrixTransform($('board').getScreenCTM().inverse());
-  }
-  function moveGhost(event) {
-    // Touch: lift the piece above the finger so the vocabulary stays visible. Mouse: keep the grab point.
-    const lift = drag.pointerType === 'touch' ? S * 0.55 : 0;
-    const cx = event.clientX - drag.grab.x, cy = event.clientY - drag.grab.y - lift;
-    ghost.style.transform = `translate(${(cx - S / 2 - 4).toFixed(1)}px, ${(cy - drag.top - 4).toFixed(1)}px)`;
-    const b = boardPoint(cx, cy), wrap = $('board-wrap').getBoundingClientRect(), trayBox = $('tray').getBoundingClientRect();
-    const overBoard = cx >= wrap.left && cx <= wrap.right && cy >= wrap.top && cy <= wrap.bottom;
-    const slot = overBoard ? nearestSlot(b) : null;
-    const occupant = slot && Object.keys(state.pieces).find(id => state.pieces[id].slot === slot);
-    drag.target = slot && (!occupant || occupant === drag.id) ? slot : null;
-    drag.overTray = event.clientX >= trayBox.left && event.clientX <= trayBox.right && event.clientY >= trayBox.top && event.clientY <= trayBox.bottom;
-    document.querySelectorAll('.slot.hover').forEach(el => el.classList.remove('hover'));
-    if (drag.target) document.querySelector(`.slot[data-slot="${drag.target}"]`)?.classList.add('hover');
-    $('tray').classList.toggle('drop-here', drag.overTray && !!state.pieces[drag.id].slot);
-  }
-  function startDragVisual(event) {
-    const p = state.pieces[drag.id], h = S * H;
-    drag.top = p.rotation % 2 === 0 ? 2 * h / 3 : h / 3;
-    ghost.setAttribute('viewBox', `${(-S / 2 - 4).toFixed(1)} ${(-drag.top - 4).toFixed(1)} ${(S + 8).toFixed(1)} ${(h + 8).toFixed(1)}`);
-    ghost.setAttribute('width', S + 8); ghost.setAttribute('height', h + 8);
-    ghost.innerHTML = pieceInner(pieceById.get(drag.id), p.rotation, false);
-    ghost.hidden = false;
-    drag.el.classList.add('lifted');
-    moveGhost(event);
-  }
-  function endDrag(cancelled, event) {
-    const d = drag; drag = null;
-    ghost.hidden = true; ghost.innerHTML = '';
-    document.querySelectorAll('.slot.hover').forEach(el => el.classList.remove('hover'));
-    $('tray').classList.remove('drop-here');
-    d.el.classList.remove('lifted');
-    const kind = cancelled ? d.gesture.cancel() : d.gesture.end(event.timeStamp);
-    if (kind === 'tap') {
-      if (interaction === 'tap') { selected = tapPiece(state, selected, d.id); updateTapTools(); return render(); }
-      return apply(rotatePiece(state, template, d.id));
-    }
-    if (kind !== 'drag') return render();
-    if (d.target) { if (selected === d.id) { selected = null; cursorSlot = null; } updateTapTools(); return apply(placePiece(state, template, d.id, d.target)); }
-    if (d.overTray && state.pieces[d.id].slot) return apply(removePiece(state, template, d.id));
-    render(); // dropped elsewhere: the piece goes back exactly where it was
-  }
   const workspace = $('workspace');
+  // The click a browser fires after a tap or hold lands on whatever is now under the finger (e.g. the empty space a
+  // returned piece left). Only that click — same place, straight after — is ignored; taps elsewhere work at once.
+  let press = null, lastPress = { x: 0, y: 0, t: -1e9 };
+  const echoClick = event => performance.now() - lastPress.t < 600 && Math.hypot(event.clientX - lastPress.x, event.clientY - lastPress.y) < 24;
+  function cancelPress() { if (!press) return; clearTimeout(press.timer); press.el?.classList.remove('pressing'); press = null; }
+  function backToTray(id) {
+    if (selected === id) selected = null;
+    apply(removePiece(state, template, id)); say('Back in the tray.');
+  }
+  function tapOnPiece(id) {
+    const p = state.pieces[id];
+    if (!p || p.locked) return;
+    if (!p.slot) { selected = tapPiece(state, selected, id); cursorSlot = null; render(); say(selected ? `Selected. ${describe(id)}. Tap an empty space.` : 'Selection cleared.'); return; }
+    const action = boardTapAction(state, selected, id);
+    if (action === 'rotate') { apply(rotatePiece(state, template, id)); say('Turned 120 degrees.'); }
+    else if (action === 'occupied') say('That space already has a piece. Tap an empty space.');
+  }
   workspace.addEventListener('pointerdown', event => {
-    if (drag) { if (event.pointerId !== drag.pointerId) { drag.gesture.cancel(); endDrag(true, event); } return; }
     if (completed || !event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
     const el = event.target.closest('[data-piece]');
+    cancelPress();
     if (!el || state.pieces[el.dataset.piece]?.locked) return;
-    const box = el.getBoundingClientRect(), p = state.pieces[el.dataset.piece];
-    // Grab offset relative to the piece centroid on screen.
-    const centre = p.slot ? (() => { const c = slotCentre(p.slot), m = $('board').getScreenCTM(); return { x: m.a * c.x + m.e, y: m.d * c.y + m.f }; })()
-      : { x: box.left + box.width / 2, y: box.top + box.height * (p.rotation % 2 === 0 ? 0.64 : 0.36) };
-    drag = { id: el.dataset.piece, el, pointerId: event.pointerId, pointerType: event.pointerType, grab: { x: event.clientX - centre.x, y: event.clientY - centre.y }, target: null, overTray: false,
-      gesture: createGesture({ pointerType: event.pointerType, x: event.clientX, y: event.clientY, time: event.timeStamp }) };
-    if (event.pointerType !== 'touch' || p.slot) capture(el, event.pointerId);
+    const id = el.dataset.piece, onBoard = !!state.pieces[id].slot;
+    press = { id, el, x: event.clientX, y: event.clientY, pointerId: event.pointerId, handled: false, gesture: createGesture({ pointerType: event.pointerType, x: event.clientX, y: event.clientY, time: event.timeStamp }) };
+    if (onBoard && boardTapAction(state, selected, id) === 'rotate') {
+      el.classList.add('pressing'); // visual feedback: a ring fills while the piece is held
+      press.timer = setTimeout(() => {
+        if (!press || press.id !== id) return;
+        press.handled = true; lastPress = { x: press.x, y: press.y, t: performance.now() };
+        el.classList.remove('pressing'); backToTray(id);
+      }, LONG_PRESS_MS);
+    }
   }, on);
   workspace.addEventListener('pointermove', event => {
-    if (!drag || event.pointerId !== drag.pointerId) return;
-    const wasDragging = drag.gesture.dragging;
-    if (!drag.gesture.move(event.clientX, event.clientY)) return;
-    if (!wasDragging) { capture(drag.el, event.pointerId); startDragVisual(event); }
-    event.preventDefault();
-    moveGhost(event);
-  }, { passive: false, signal: ac.signal });
-  workspace.addEventListener('pointerup', event => { if (drag && event.pointerId === drag.pointerId) endDrag(false, event); }, on);
-  workspace.addEventListener('pointercancel', event => { if (drag && event.pointerId === drag.pointerId) endDrag(true, event); }, on);
-  workspace.addEventListener('contextmenu', event => event.preventDefault(), on);
+    if (press && event.pointerId === press.pointerId && press.gesture.move(event.clientX, event.clientY)) cancelPress(); // moved: neither tap nor hold
+  }, on);
+  workspace.addEventListener('pointerup', event => {
+    if (!press || event.pointerId !== press.pointerId) return;
+    const p = press, moved = p.gesture.dragging; clearTimeout(p.timer); p.el?.classList.remove('pressing'); press = null;
+    if (p.handled || moved) return;   // a long press already returned the piece; a slide is ignored
+    lastPress = { x: event.clientX, y: event.clientY, t: performance.now() }; // its own click must not reach a space underneath
+    tapOnPiece(p.id);
+  }, on);
+  workspace.addEventListener('pointercancel', cancelPress, on);
+  workspace.addEventListener('contextmenu', event => event.preventDefault(), on); // no native menu on long press
   workspace.addEventListener('dragstart', event => event.preventDefault(), on);
+  $('board').addEventListener('click', event => {
+    const slot = event.target.closest?.('.slot');
+    if (!slot || completed || echoClick(event)) return;
+    const result = tapSlot(state, template, selected, slot.dataset.slot);
+    if (result.ok) { state = result.state; selected = result.selected; cursorSlot = null; render(); const pr = progressOf(puzzle, state, template); if (!completed) say(`Placed. ${pr.matched} of ${pr.total} matches.`); }
+  }, on);
   // Keyboard (D1): Tab to a piece · Enter/Space select · arrow keys choose a space · Enter/Space place · R turn ·
   // Delete/Backspace back to the tray · Escape cancel. Works in both Drag and Tap modes; locked pieces are skipped.
   workspace.addEventListener('keydown', event => {
@@ -251,13 +233,13 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     const key = event.key, pieceEl = event.target.closest?.('[data-piece]'), slotEl = event.target.closest?.('.slot');
     const isSelect = key === 'Enter' || key === ' ', isTurn = key === 'r' || key === 'R', isBack = key === 'Delete' || key === 'Backspace';
     if (key === 'Escape' && (selected || cursorSlot)) {
-      event.preventDefault(); const id = selected; selected = null; cursorSlot = null; updateTapTools();
+      event.preventDefault(); const id = selected; selected = null; cursorSlot = null;
       focusAfter = id ? { piece: id } : null; render(); say('Cancelled.'); return;
     }
     if (pieceEl && state.pieces[pieceEl.dataset.piece] && !state.pieces[pieceEl.dataset.piece].locked) {
       const id = pieceEl.dataset.piece;
       if (isSelect) {
-        event.preventDefault(); selected = tapPiece(state, selected, id); updateTapTools();
+        event.preventDefault(); selected = tapPiece(state, selected, id);
         if (selected) {
           const empty = template.slots.find(sl => !Object.values(state.pieces).some(p => p.slot === sl.id));
           cursorSlot = state.pieces[id].slot || empty?.id || template.slots[0].id; focusAfter = { slot: cursorSlot };
@@ -267,7 +249,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
       }
       if (isTurn) { event.preventDefault(); focusAfter = { piece: id }; apply(rotatePiece(state, template, id)); say(state.pieces[id].slot ? 'Turned 120 degrees.' : 'Turned 60 degrees.'); return; }
       if (isBack && state.pieces[id].slot) {
-        event.preventDefault(); if (selected === id) { selected = null; cursorSlot = null; updateTapTools(); }
+        event.preventDefault(); if (selected === id) { selected = null; cursorSlot = null; }
         focusAfter = { piece: id }; apply(removePiece(state, template, id)); say('Back in the tray.'); return;
       }
     }
@@ -280,12 +262,12 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
       if (isSelect) {
         event.preventDefault(); const id = selected, r = tapSlot(state, template, selected, slotId);
         if (!r.ok) { say(r.reason === 'occupied' ? 'This space already has a piece. Choose an empty space.' : 'The piece cannot go there.'); return; }
-        state = r.state; selected = null; cursorSlot = null; updateTapTools(); focusAfter = { piece: id }; render();
+        state = r.state; selected = null; cursorSlot = null; focusAfter = { piece: id }; render();
         const pr = progressOf(puzzle, state, template); say(`Placed. ${pr.matched} of ${pr.total} matches.`); return;
       }
       if (isTurn) { event.preventDefault(); focusAfter = { slot: slotId }; apply(rotatePiece(state, template, selected)); say('Turned.'); return; }
       if (isBack && state.pieces[selected].slot) {
-        event.preventDefault(); const id = selected; selected = null; cursorSlot = null; updateTapTools();
+        event.preventDefault(); const id = selected; selected = null; cursorSlot = null;
         focusAfter = { piece: id }; apply(removePiece(state, template, id)); say('Back in the tray.'); return;
       }
     }
@@ -299,34 +281,18 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
   });
   const controls = {
-    'shuffle-btn': () => { state = shuffleTray(state, random); updateTapTools(); render(); },
+    'shuffle-btn': () => { state = shuffleTray(state, random); render(); },
     'restart-btn': async () => {
       if (hasProgress(puzzle, state) && !await confirmDialog('Start this puzzle again? The pieces you have placed will go back to the tray.', 'Start again')) return;
-      state = resetState(puzzle); selected = null; updateTapTools(); completed = false; $('complete-note').hidden = true; document.body.classList.remove('puzzle-complete'); render();
+      state = resetState(puzzle); selected = null; completed = false; $('complete-note').hidden = true; document.body.classList.remove('puzzle-complete'); render();
+      startedAt = performance.now(); timeTakenMs = null; // a restarted puzzle is a new game: the time starts again
     },
     'setup-btn': async () => {
       if (!completed && hasProgress(puzzle, state) && !await confirmDialog('Go back to choosing words? This puzzle will be closed.', 'Back to setup')) return;
       teardown(); onExit();
     },
-    'bank-btn': () => toggleBank(true), 'bank-close': () => toggleBank(false),
-    'mode-drag': () => setInteraction('drag'), 'mode-tap': () => setInteraction('tap'),
-    'turn-btn': () => { if (selected) apply(rotatePiece(state, template, selected)); },
-    'back-btn': () => { if (selected && state.pieces[selected].slot) { apply(removePiece(state, template, selected)); } }
+    'bank-btn': () => toggleBank(true), 'bank-close': () => toggleBank(false)
   };
-  function setInteraction(mode) { // switching never changes the puzzle state
-    interaction = mode; selected = null; cursorSlot = null;
-    $('mode-drag').setAttribute('aria-pressed', String(mode === 'drag')); $('mode-tap').setAttribute('aria-pressed', String(mode === 'tap'));
-    $('tap-tools').hidden = mode !== 'tap'; updateTapTools(); render();
-  }
-  function updateTapTools() {
-    $('turn-btn').disabled = !selected; $('back-btn').disabled = !(selected && state.pieces[selected]?.slot);
-  }
-  $('board').addEventListener('click', event => {
-    const slot = event.target.closest?.('.slot');
-    if (interaction !== 'tap' || !slot || completed) return;
-    const result = tapSlot(state, template, selected, slot.dataset.slot);
-    if (result.ok) { state = result.state; selected = result.selected; cursorSlot = null; updateTapTools(); render(); }
-  }, on);
   const onClick = event => { const b = event.target.closest('button[id]'); if (b && controls[b.id]) controls[b.id](); };
   document.addEventListener('click', onClick, on);
 
@@ -342,8 +308,9 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
 
   const observer = new ResizeObserver(() => resize());
   observer.observe($('board-wrap')); observer.observe($('tray'));
-  function teardown() { observer.disconnect(); ac.abort(); }
+  function teardown() { cancelPress(); observer.disconnect(); ac.abort(); }
   resize();
+  startedAt = performance.now(); // the board is drawn and ready for the first tap
   // Test/diagnostic hooks (no effect on play).
-  return { get state() { return state; }, get side() { return S; }, get layouts() { return layouts; }, teardown };
+  return { get state() { return state; }, get side() { return S; }, get layouts() { return layouts; }, get timeTakenMs() { return timeTakenMs; }, teardown };
 }

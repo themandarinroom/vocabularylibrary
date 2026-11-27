@@ -2,11 +2,11 @@
 // (the spatial challenge) and matching mode (the language challenge). Shapes come from the engine's STUDENT_TEMPLATES,
 // so a future shape (e.g. a Starter level's) appears without code changes. The student's shape and mode are never
 // changed for them: an unplayable combination is explained, and Start stays disabled.
-import { MODES, STUDENT_TEMPLATES, studentOptions } from './engine/index.mjs';
+import { MODES, MATCH_LEVELS, levelForMode, STUDENT_TEMPLATES, studentOptions } from './engine/index.mjs';
 import { mergeSets, eligibleEntries, usableCount } from '../vocabulary-games-core/vocabulary.mjs';
 
 export const DEFAULT_SHAPE = 'hexagon-6';
-export const DEFAULT_MODE = 'pinyin-english';
+export const DEFAULT_MODE = 'pinyin-picture'; // D3: Beginner · Pinyin + Picture is the default
 export const yearName = y => Number(y) === 0 ? 'Prep' : Number.isFinite(Number(y)) && y !== null && y !== '' ? `Year ${y}` : 'All years';
 const stem = title => String(title || '').replace(/\s+[IVX]+$/, '').trim().toLowerCase(); // "Countries II" → "countries"
 
@@ -60,9 +60,14 @@ export function setupView(sets, selection) {
     message: `This puzzle needs ${chosenShape.requiredPairs} different words. Your sets have ${usable} ${usable === 1 ? 'word' : 'words'} that work with ${mode.label}.`,
     suggestions: suggestSets(sets, sel.setIds, sel.modeId, chosenShape.requiredPairs),
     smallerShapes: shapes.filter(s => s.available).map(s => s.name) };
+  // D3: "Choose a level" — each level lists its matching modes (with their word counts) for its dropdown.
+  const level = levelForMode(sel.modeId);
+  const levels = Object.values(MATCH_LEVELS).map(l => ({ id: l.id, label: l.label, chinese: l.chinese, selected: l.id === level.id,
+    modes: modes.filter(m => l.modes.includes(m.modeId)) }));
+  const preview = entries.slice(0, 24).map(e => ({ chinese: e.chinese, english: e.english }));
   return {
-    selection: sel, words: entries.length, duplicates, setCount: sel.setIds.length, shapes, modes, ready, feedback,
-    summary: ready ? `${usable} words · ${chosenShape.name} (${chosenShape.pieceCount} pieces · ${chosenShape.requiredPairs} pairs) · ${mode.label}` : '',
+    selection: sel, words: entries.length, duplicates, setCount: sel.setIds.length, shapes, modes, level: level.id, levels, preview, ready, feedback,
+    summary: ready ? `${usable} words · ${chosenShape.name} (${chosenShape.pieceCount} pieces · ${chosenShape.requiredPairs} pairs) · ${level.label} · ${mode.label}` : '',
     start: ready ? { setIds: sel.setIds, templateId: sel.templateId, modeId: sel.modeId } : null
   };
 }

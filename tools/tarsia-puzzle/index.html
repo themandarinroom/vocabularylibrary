@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Tarsia Puzzle · The Mandarin Room</title>
   <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-d3">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-d3b">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to setup</a>
@@ -44,13 +44,14 @@
 
       <div class="setup-grid tarsia-grid">
         <section class="panel" aria-labelledby="s1">
-          <div class="panel-heading"><span class="step" aria-hidden="true">1</span><h2 id="s1">Choose your words</h2><span id="chosen-badge" class="count-badge"></span></div>
+          <div class="panel-heading"><span class="step" aria-hidden="true">1</span><h2 id="s1">Choose your words</h2></div>
           <div class="panel-body">
             <p class="field-label" id="sets-label">Vocabulary Sets <span class="field-hint">Choose one or more</span></p>
-            <div id="sets" class="set-cards" role="group" aria-labelledby="sets-label" aria-busy="true"><p class="help">Loading…</p></div>
+            <div id="sets" class="set-list" role="group" aria-labelledby="sets-label" aria-busy="true"><p class="help">Loading…</p></div>
             <p id="set-summary" class="help" aria-live="polite"></p>
-            <div class="load-row"><p id="load-status" class="help" role="status">Loading published vocabulary…</p>
-              <button id="reload" type="button" class="text-button">Reload vocabulary</button></div>
+            <p id="load-status" class="help" role="status">Loading published vocabulary…</p>
+            <div id="set-preview" class="set-preview" aria-label="Words in your chosen sets"></div>
+            <button id="reload" type="button" class="text-button">Reload vocabulary</button>
           </div>
         </section>
 
@@ -60,9 +61,9 @@
             <div class="panel-body"><fieldset class="shape-grid" id="shapes"><legend class="sr-only">Puzzle shape</legend></fieldset></div>
           </section>
           <section class="panel" aria-labelledby="s3">
-            <div class="panel-heading"><span class="step" aria-hidden="true">3</span><h2 id="s3">Choose how to match</h2></div>
+            <div class="panel-heading"><span class="step" aria-hidden="true">3</span><h2 id="s3">Choose a level</h2></div>
             <div class="panel-body">
-              <fieldset class="mode-list" id="modes"><legend class="sr-only">Matching</legend></fieldset>
+              <fieldset class="levels" id="levels"><legend class="sr-only">Level</legend></fieldset>
               <div id="setup-feedback" aria-live="polite"></div>
               <div class="start-bar">
                 <p id="ready" class="notice ready-line" role="status"></p>
@@ -81,9 +82,7 @@
         <div class="progress-row"><div id="progress" class="progress" role="progressbar" aria-label="Correct matches" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"><span id="progress-bar"></span></div>
           <span id="progress-text" class="progress-text" aria-live="polite"></span></div>
         <div class="game-controls">
-          <span class="mode-toggle" role="group" aria-label="How to move pieces"><button id="mode-drag" type="button" aria-pressed="true">Drag</button><button id="mode-tap" type="button" aria-pressed="false" aria-label="Tap to place" title="Tap to place">Tap</button></span>
-          <span class="tap-tools" id="tap-tools" hidden><button id="turn-btn" type="button" class="tool-button" aria-label="Turn the selected piece" title="Turn (R)" disabled><span aria-hidden="true">↻</span> Turn</button><button id="back-btn" type="button" class="tool-button" aria-label="Put the selected piece back in the tray" title="Back to tray (Delete)" disabled><span aria-hidden="true">↩</span> Tray</button></span>
-          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank<span class="wide-only" lang="zh-Hans"> 词库</span></button>
+          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank</button>
           <button id="shuffle-btn" type="button" class="tool-button">Shuffle</button>
           <button id="restart-btn" type="button" class="tool-button">Restart</button>
           <button id="setup-btn" type="button" class="tool-button">Setup</button>
@@ -95,6 +94,7 @@
           <p id="kb-status" class="sr-only" aria-live="polite"></p></div>
         <section id="tray" class="tray" aria-label="Pieces to place">
           <p id="tray-count" class="tray-count"></p>
+          <p id="play-hint" class="play-hint">Tap a piece, then tap an empty space. Tap a placed piece to turn it. Hold a placed piece to send it back.</p>
           <p id="kb-help" class="kb-hint"><b>Keyboard:</b> <span><kbd>Enter</kbd> select</span> <span><kbd>←↑→↓</kbd> choose a space</span> <span><kbd>Enter</kbd> place</span> <span><kbd>R</kbd> turn</span> <span><kbd>Delete</kbd> back to tray</span> <span><kbd>Esc</kbd> cancel</span></p>
           <div id="tray-list" class="tray-list"></div>
         </section>
@@ -142,7 +142,6 @@
     </div>
   </section>
 
-  <svg id="drag-ghost" class="drag-ghost" aria-hidden="true" focusable="false" hidden></svg>
   <dialog id="confirm" class="confirm">
     <form method="dialog"><p id="confirm-text"></p>
       <div class="confirm-actions"><button value="cancel" class="secondary-button">Keep playing</button><button id="confirm-ok" value="ok" class="primary-button">OK</button></div></form>

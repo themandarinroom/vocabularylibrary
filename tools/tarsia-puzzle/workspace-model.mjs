@@ -38,6 +38,17 @@ export function tapSlot(state, template, selected, slotId) {
   return result.ok ? { ...result, selected: null } : { ...result, selected };
 }
 
+// D3 (tap only): holding a placed piece this long sends it back to the tray.
+export const LONG_PRESS_MS = 500;
+// D3: what a tap on a PLACED piece does. Locked → nothing. While another piece is selected (waiting for a space),
+// the tap must not turn or replace the placed piece → 'occupied'. Otherwise it turns 120° → 'rotate'.
+export function boardTapAction(state, selected, pieceId) {
+  const p = state.pieces[pieceId];
+  if (!p || !p.slot || p.locked) return 'none';
+  if (selected && selected !== pieceId) return 'occupied';
+  return 'rotate';
+}
+
 // Keyboard (D1): arrow keys move the space cursor to the nearest slot in that direction (by slot centres).
 // Returns the same slot when there is nothing further that way.
 export function slotNeighbour(template, slotId, key) {

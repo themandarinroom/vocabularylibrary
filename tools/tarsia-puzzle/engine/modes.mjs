@@ -24,6 +24,14 @@ export const LEVELS = Object.freeze({
     templates: ['triangle-16'], defaultStart: { 'triangle-16': 'centre' } }
 });
 
+// Student levels (owner decision, 27 Nov 2026): the level chooses the MATCHING MODE only, never the puzzle size.
+// All four student shapes stay available at both levels (subject to vocabulary eligibility).
+export const MATCH_LEVELS = Object.freeze({
+  beginner: Object.freeze({ id: 'beginner', label: 'Beginner', chinese: '初级', modes: Object.freeze(['pinyin-picture', 'pinyin-english']) }),
+  master: Object.freeze({ id: 'master', label: 'Master', chinese: '高级', modes: Object.freeze(['hanzi-english', 'hanzi-pinyin', 'hanzi-picture']) })
+});
+export const levelForMode = modeId => Object.values(MATCH_LEVELS).find(l => l.modes.includes(modeId)) || null;
+
 export function getMode(id) { const mode = MODES[id]; if (!mode) throw new Error(`Unknown matching mode: ${id}`); return mode; }
 export function getLevel(id) { const level = LEVELS[id]; if (!level) throw new Error(`Unknown level: ${id}`); return level; }
 export const learningIntention = modeId => getMode(modeId).learningIntention;
