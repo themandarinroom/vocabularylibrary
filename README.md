@@ -1,13 +1,18 @@
 # The Mandarin Room — Vocabulary Library
 
-A lightweight, teacher-editable library of Mandarin vocabulary sets, with a deliberately focused flashcard student viewer. Version 0.4 adds cross-device cloud synchronisation for vocabulary sets while preserving Teacher Voice Cloud.
+A teacher-editable library of Mandarin vocabulary sets with a focused flashcard Student View, plus the classroom tools in `tools/`: Word Randomiser, Bingo Solo, Build the Great Wall and Tarsia Puzzle. Published at https://themandarinroom.github.io/vocabularylibrary/ (GitHub Pages from `main`).
+
+**Standards:** this repository is the shared standards hub for The Mandarin Room. Agents and contributors start with `AGENTS.md` and [docs/PROJECT_STANDARDS.md](docs/PROJECT_STANDARDS.md).
+- [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md): vocabulary content, IDs and imports.
+- [docs/ASSETS.md](docs/ASSETS.md): images, covers, audio and the local archive.
+- [docs/TOPICS.md](docs/TOPICS.md): topics.
 
 ## Run locally
 
-Because the JavaScript uses browser modules, serve the repository rather than opening the HTML file directly:
+Because the JavaScript uses browser modules, serve a checkout of this repository rather than opening the HTML file directly:
 
 ```sh
-cd "The Mandarin Room"
+cd vocabularylibrary   # a checkout or worktree of origin/main
 python3 -m http.server 8000
 ```
 
@@ -15,7 +20,7 @@ Open `http://localhost:8000`. The project uses only plain HTML, CSS and JavaScri
 
 ## Vocabulary data
 
-Seed sets live in `js/vocabulary-data.js`, separate from the interface. Published teacher edits are stored in Firestore under `vocabularySets/{setId}` and update Home and Student View in real time across devices. The previous browser-local data under `mandarin-room-vocabulary-v2` remains as a migration and offline fallback so an existing Mac set can be published by opening it and choosing **Save**. Each set has a stable `id`, year level, English and Chinese titles, description, and an `items` array. Generic language items support words, phrases or sentences; Chinese, lowercase no-tone Pinyin, English, optional image and notes, independent AI/teacher audio settings, and reserved handwriting data.
+Seed sets live in `js/vocabulary-data.js`, separate from the interface. Published teacher edits are stored in Firestore under `vocabularySets/{setId}` and update Home and Student View in real time across devices. The previous browser-local data under `mandarin-room-vocabulary-v2` remains as a migration and offline fallback so an existing Mac set can be published by opening it and choosing **Save**. Each set has a stable `id`, year level, English and Chinese titles, description, topics and an `items` array. Items support words, phrases or sentences: Chinese, pinyin, English, an optional image and notes, independent AI and teacher audio settings, and reserved handwriting data. The full field list, ID rules, pinyin standard (lowercase, no tones, `ü` kept) and English capitalisation standard are in [docs/VOCABULARY_SET_CREATION.md](docs/VOCABULARY_SET_CREATION.md) §7–§9.
 
 ```js
 {
@@ -64,6 +69,8 @@ Tests:
 
 The **Vocabulary Set Cover** section sits directly below Set details. Covers and item images (item **⋯ More** panel) can come from **Upload Image** (file picker, iPad Photo Library/Files, or drag and drop on desktop), an image URL, or the existing AI generation.
 
+The image standard (sizes, transparency, Storage paths, cover reuse, local archive) is [docs/ASSETS.md](docs/ASSETS.md). This section describes the editor's implementation of it.
+
 - Accepts JPG, PNG and WebP up to 10 MB. The real format is detected from the file's bytes, not its name or MIME type.
 - Images are resized without upscaling (cover ≤ 1200 px, item ≤ 800 px on the longest side), keep their aspect ratio and transparency, and are encoded as WebP (targets: cover ≤ 300 KB, item ≤ 150 KB). Safari/iPadOS, whose Canvas cannot encode WebP, uses the vendored libwebp encoder shared with Unit Library (`vendor/jsquash-webp`). Every upload is checked for genuine `RIFF…WEBP` bytes.
 - Selecting an image only prepares a local preview. Nothing is uploaded and the published image is unchanged until **Save set**. Save uploads new images, writes the set once, then deletes superseded managed images only when no published set still references them. If anything fails, new uploads are rolled back, the published set is unchanged, and all unsaved edits stay in the editor for a retry.
@@ -77,7 +84,7 @@ Use **+ New Set** in the teacher library, or choose **Edit** on a card. Choose t
 
 The **Generate Pinyin & English** helper uses a deliberately small local dictionary for common seed vocabulary. It never calls a paid API, never overwrites a populated Pinyin or English field, and all results remain editable. When no suggestion exists, enter the fields manually.
 
-Future apps under `/tools/` can use the stable set ID in URLs such as `/tools/randompicker/?set=year5-countries`, then load the matching set through a shared/exported version of this data layer. Random Picker is intentionally not included in v0.1.
+Tools under `/tools/` load sets by stable set ID through the shared vocabulary store (or its vendored copies in `tools/*/shared/`); they never keep their own copy of the vocabulary.
 
 ## Teacher Voice Cloud
 
@@ -103,11 +110,11 @@ Firestore stores only retrieval metadata in `vocabularyTeacherVoices/{setId}--{i
 
 Student View listens to that metadata document. A successful save or deletion therefore appears across computers and iPads without copying audio into browser storage. AI Voice remains independent. Replacements upload to a new revision first, then atomically change the metadata pointer, and finally delete the previous object. A failed upload or metadata write leaves the previous recording active; failed new objects are cleaned up.
 
-`firebase-config.js` contains Firebase's public web-app identifier—not a private server credential. Access is enforced by Google Authentication, `authorizedTeachers`, and the checked-in `firestore.rules` and `storage.rules`. Deploy both rule files from this directory with `firebase deploy --only firestore:rules,storage`; they preserve Speaking's existing rules and add only the Vocabulary paths. Do not deploy partial replacement rules copied from the README.
+`firebase-config.js` contains Firebase's public web-app identifier—not a private server credential. Access is enforced by Google Authentication, `authorizedTeachers`, and the checked-in `firestore.rules` and `storage.rules`. Rules are deployed only from this repository and only with separate owner approval. ⚠ `storage.rules` here is known to be behind the deployed Production Storage rules, so **do not deploy it as-is**. Verify the deployed rules first ([docs/PROJECT_STANDARDS.md](docs/PROJECT_STANDARDS.md) §6). Do not deploy partial replacement rules copied from the README.
 
 ## Audio
 
-AI Voice is isolated in `js/audio.js` and currently uses browser speech synthesis. Teacher Voice uses a standard cloud audio URL and `<audio>` playback, so it does not depend on Web Speech support. Recording follows Speaking's compatibility order: Opus/WebM where supported, MP4 on Safari where supported, then the browser default MediaRecorder format.
+AI Voice is isolated in `js/audio.js` and uses browser speech synthesis. It always names a standard Mandarin voice (`chooseMandarinVoice`, Tingting preferred), because a language-only request is silent on the school iPad 7 ([docs/ASSETS.md](docs/ASSETS.md) §6). Teacher Voice uses a standard cloud audio URL and `<audio>` playback, so it does not depend on Web Speech support. Recording follows Speaking's compatibility order: Opus/WebM where supported, MP4 on Safari where supported, then the browser default MediaRecorder format.
 
 ## Current limitations and future work
 
@@ -115,9 +122,8 @@ AI Voice is isolated in `js/audio.js` and currently uses browser speech synthesi
 - Microphone recording requires HTTPS or localhost and explicit browser permission. Older iPads must support `MediaRecorder`; playback has broader compatibility than recording.
 - Teacher uploads require an authorised Google teacher account. Student playback is public for a known stable set/item ID and collects no student data.
 - Browser AI voices and pronunciation quality vary by device.
-- Image assets are not yet supplied.
 - Handwriting fields are reserved but stroke animation is not implemented.
-- Planned capabilities: handwriting/stroke animation, Random Picker, Listening, Bingo, Sentence Builder, and shared Vocabulary consumption from Speaking.
+- Planned capabilities: handwriting/stroke animation, Sentence Builder, and shared Vocabulary consumption from Speaking. (Word Randomiser, Bingo Solo, Build the Great Wall and Tarsia Puzzle now exist under `tools/`; see the release history in `AGENTS.md` §7.)
 
 The repository root can be published as the standalone GitHub Pages project at `https://themandarinroom.github.io/vocabularylibrary/`.
 
