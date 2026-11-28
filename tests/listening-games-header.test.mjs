@@ -8,7 +8,7 @@ const LISTENING_GAMES = 'https://themandarinroom.au/#/activities/listening-games
 const read = file => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const games = [
   {dir: 'tools/bingo-board', name: 'Bingo', css: 'listening-header-1'},
-  {dir: 'tools/great-wall', name: 'Build the Great Wall', css: 'gw-0.2.1'},
+  {dir: 'tools/great-wall', name: 'Build the Great Wall', css: 'gw-0.2.2'},
 ];
 
 for (const game of games) {

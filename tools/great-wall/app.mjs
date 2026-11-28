@@ -8,6 +8,8 @@ import { createWallGame, TARGET_BRICKS } from './game.mjs';
 import { sceneMarkup, renderStones } from './scene.mjs';
 import { SLOTS } from './wall.mjs';
 import { REWARDS, assignBoxes, rewardById, VIDEO_SECONDS } from './rewards.mjs';
+// Bingo Solo's Production-accepted Listening Break guard, reused unchanged (no copy of its logic).
+import { createListenGuard } from '../bingo-board/listen-guard.mjs';
 
 const $ = id => document.getElementById(id);
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -25,9 +27,22 @@ let boxes = [];
 const later = (fn, ms) => { const id = setTimeout(() => { timers = timers.filter(t => t !== id); fn(); }, ms); timers.push(id); return id; };
 const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
+// Listen anti-spam: same thresholds as Bingo Solo (5 deliberate Listen taps in 2 s → 30 s Listening Break).
+// Great Wall stores its own break expiry, so a break in one game never locks the other.
+// The test harness may pass a shorter config, as in Bingo Solo.
+export const GREAT_WALL_BREAK_KEY = 'tmr-great-wall-listen-break-until';
+const guard = createListenGuard({ config: { STORAGE_KEY: GREAT_WALL_BREAK_KEY, ...globalThis.__TMR_LISTEN_GUARD_CONFIG__ } });
+let audioBusySince = null, breakTimer = null;
+const audioBusy = () => audioBusySince !== null && Date.now() - audioBusySince < guard.config.BUSY_MAX_MS;
+const onBreak = () => guard.active();
+function stopAudio() { player.cancel(); audioBusySince = null; }
+
 const player = createAudioPlayer({ getVoice: loadVoice, canUseAiVoice, speakMandarin, playTeacherVoice,
   stopAi: () => window.speechSynthesis?.cancel(),
   onStatus: status => {
+    // Playback is "busy" from the first loading/playing report until it ends or fails (overlapping Listen taps are ignored).
+    if (status.kind === 'loading' || status.kind === 'playing') { if (audioBusySince === null) audioBusySince = Date.now(); }
+    else audioBusySince = null;
     $('audio-status').textContent = status.message;
     $('listen').classList.toggle('playing', status.kind === 'playing');
     if (status.kind === 'error') { feedback('The sound did not play. Tap Listen to try again.', 'warning'); enableChoices(); }
@@ -167,10 +182,10 @@ function prepareAudio() {
   player.prepare(entries.get(game.upcomingKey()));
 }
 function answer(key) {
-  if (!game || game.state.phase !== 'question') return;
+  if (!game || game.state.phase !== 'question' || onBreak()) return;
   const outcome = game.answer(key);
   if (outcome === 'correct') {
-    player.cancel();
+    stopAudio();
     feedback(['Correct! 对了！', 'Well done! 太棒了！', 'Great listening! 很好！'][game.state.correct % 3], 'correct');
     document.querySelector(`#choices [data-key="${CSS.escape(key)}"]`)?.classList.add('right');
     document.querySelectorAll('#choices .choice').forEach(button => { button.disabled = true; });
@@ -187,7 +202,7 @@ document.addEventListener('keydown', () => { lastInput = 'keyboard'; }, true);
 function focusFirstSlot() { if (lastInput === 'keyboard') sceneStones().querySelector('.slot.legal')?.focus(); }
 
 function placeStone(slotId) {
-  if (!game || game.state.phase !== 'place') return;
+  if (!game || game.state.phase !== 'place' || onBreak()) return;
   const outcome = game.place(slotId);
   if (outcome === 'illegal' || outcome === 'inactive') return;
   justPlaced = slotId;
@@ -199,15 +214,15 @@ function placeStone(slotId) {
   later(() => {
     justPlaced = null; feedback('');
     renderGame(); prepareAudio();
-    player.play(entries.get(game.state.question.targetKey));
+    if (!onBreak()) player.play(entries.get(game.state.question.targetKey)); // automatic: never counted, never during a break
     if (lastInput === 'keyboard') $('listen').focus();
   }, ADVANCE_MS);
 }
 
 function startGame() {
   const level = supportedLevel(pool.length, chosenLevel);
-  if (!level) return;
-  clearTimers(); player.cancel(); closeViewer(false);
+  if (!level || onBreak()) return;
+  clearTimers(); stopAudio(); closeViewer(false);
   try { game = createWallGame({ pool, level, brokenImages }); }
   catch (error) { $('config-status').textContent = error.message; return; }
   entries = new Map(pool.map(item => [item.key, item]));
@@ -308,7 +323,7 @@ function finishViewer() { if (viewerDone) return; viewerDone = true; setProgress
 $('viewer-close').addEventListener('click', () => { viewerDone = true; closeViewer(true); });
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('viewer').hidden) { viewerDone = true; closeViewer(true); } });
 function showComplete_() {
-  player.cancel();
+  stopAudio();
   $('reward').hidden = true; $('game').hidden = true;
   const done = document.querySelector('.complete-scene');
   done.querySelector('.celebration').removeAttribute('hidden');
@@ -328,13 +343,41 @@ document.querySelectorAll('input[name="level"]').forEach(input => input.addEvent
 $('start').addEventListener('click', () => {
   startGame();
 });
+// Every deliberate Listen tap is counted (including taps ignored while a word is still playing); automatic
+// playback after a stone is placed, and the player's own Teacher Voice → AI Voice fallback, are not.
 $('listen').addEventListener('click', () => {
   if (!game || game.state.phase !== 'question') return;
+  const verdict = guard.tap();
+  if (verdict === 'break') { startBreak(); return; }
+  if (verdict === 'blocked') return;
   $('listen').classList.remove('invite');
   if (!heardOnce) $('prompt').textContent = game.state.question.mode === 'picture' ? 'Listen, then tap the matching picture.' : 'Listen, then tap the matching word.';
-  player.play(entries.get(game.state.question.targetKey));
+  if (!audioBusy()) player.play(entries.get(game.state.question.targetKey)); // an overlapping request is ignored
 });
-$('change-set').addEventListener('click', () => { clearTimers(); player.cancel(); game = null; $('game').hidden = true; $('setup').hidden = false; $('start').focus(); });
+$('change-set').addEventListener('click', () => { if (onBreak()) return; clearTimers(); stopAudio(); game = null; $('game').hidden = true; $('setup').hidden = false; $('start').focus(); });
 $('build-again').addEventListener('click', startGame); // Same set and level; new words order, new box mapping.
-window.addEventListener('pagehide', () => { clearTimers(); player.cancel(); });
+window.addEventListener('pagehide', () => { clearTimers(); stopAudio(); });
+
+// Listening Break (same overlay, wording and timing as Bingo Solo): audio stops and every control is blocked;
+// the question, chosen sets, level and placed stones are untouched. It ends by itself, with no audio on unlock.
+function startBreak() { stopAudio(); showBreak(); }
+function breakBlocked() { return [document.querySelector('header'), $('main'), document.querySelector('footer')].filter(Boolean); }
+function showBreak() {
+  for (const node of breakBlocked()) node.inert = true;
+  $('listen-break').hidden = false; $('break-title').focus({ preventScroll: true });
+  tickBreak(); if (breakTimer === null) breakTimer = setInterval(tickBreak, 250);
+}
+function tickBreak() {
+  if (!guard.active()) { endBreak(); return; }
+  $('break-count').textContent = String(Math.ceil(guard.remainingMs() / 1000));
+}
+function endBreak() {
+  if (breakTimer !== null) { clearInterval(breakTimer); breakTimer = null; }
+  for (const node of breakBlocked()) node.inert = false;
+  $('listen-break').hidden = true;
+  if (game && !$('game').hidden && game.state.phase === 'question') { $('audio-status').textContent = 'Tap Listen when you are ready.'; $('listen').focus({ preventScroll: true }); }
+}
+document.addEventListener('visibilitychange', () => { if (breakTimer !== null) tickBreak(); });
+
 refreshCatalogue();
+if (onBreak()) showBreak();   // a reload does not skip the rest of a Listening Break
