@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tarsia Puzzle · The Mandarin Room</title>
+  <link rel="icon" href="../../assets/brand/emblem-header.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?v=tarsia-0.1-d3d">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to setup</a>
+  <header class="tool-header tmr-unified-header">
+    <div class="tmr-brand">
+      <a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="../../assets/brand/emblem-header.png" width="56" height="53" alt=""></a>
+      <span class="tmr-brand-text">
+        <a class="tmr-home-link" href="https://themandarinroom.au/">The Mandarin Room</a>
+        <span class="tmr-app-row"><a class="tmr-app-link" href="https://themandarinroom.au/#/activities/vocabulary-games">Vocabulary Games</a><span class="tmr-app-current">Tarsia Puzzle</span></span>
+      </span>
+    </div>
+    <span class="phase-badge">v0.1 · Solo</span>
+  </header>
+
+  <header class="game-header" aria-label="The Mandarin Room">
+    <a class="tmr-emblem-link" href="https://themandarinroom.au/" aria-label="The Mandarin Room home"><img class="tmr-emblem" src="../../assets/brand/emblem-header.png" width="44" height="42" alt=""></a>
+    <span class="brand"><a href="https://themandarinroom.au/">The Mandarin Room</a><span class="crumbs"><a href="https://themandarinroom.au/#/activities/vocabulary-games">Vocabulary Games</a> · Tarsia Puzzle</span></span>
+    <p class="game-tags"><span id="game-level" class="tag level"></span><span id="game-mode" class="tag"></span><span id="game-sets" class="sets-line"></span></p>
+  </header>
+
+  <main id="main" class="setup-screen tarsia-setup">
+    <p id="boot-status" class="notice" role="status">Starting Tarsia Puzzle… If this does not finish, check your connection and reload this page.</p>
+    <button id="boot-retry" type="button" class="secondary-button" hidden>Reload page</button>
+
+    <section id="setup" aria-labelledby="setup-title" hidden>
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">Vocabulary game</p>
+          <h1 id="setup-title">Tarsia Puzzle <span lang="zh-Hans">词语三角拼图</span></h1>
+          <p>Match each Chinese word with its partner to join the triangles. Finish the whole shape to complete the puzzle!</p>
+        </div>
+        <svg id="hero-art" class="hero-art" viewBox="0 0 520 300" aria-hidden="true" focusable="false"></svg>
+      </div>
+
+      <div class="setup-grid tarsia-grid">
+        <section class="panel" aria-labelledby="s1">
+          <div class="panel-heading"><span class="step" aria-hidden="true">1</span><h2 id="s1">Choose your words</h2></div>
+          <div class="panel-body">
+            <p class="field-label" id="sets-label">Vocabulary Sets <span class="field-hint">Choose one or more</span></p>
+            <div id="sets" class="set-list" role="group" aria-labelledby="sets-label" aria-busy="true"><p class="help">Loading…</p></div>
+            <p id="set-summary" class="help" aria-live="polite"></p>
+            <p id="load-status" class="help" role="status">Loading published vocabulary…</p>
+            <div id="set-preview" class="set-preview" aria-label="Words in your chosen sets"></div>
+            <button id="reload" type="button" class="text-button">Reload vocabulary</button>
+          </div>
+        </section>
+
+        <div class="right-column">
+          <section class="panel" aria-labelledby="s2">
+            <div class="panel-heading"><span class="step" aria-hidden="true">2</span><h2 id="s2">Choose a puzzle shape</h2></div>
+            <div class="panel-body"><fieldset class="shape-grid" id="shapes"><legend class="sr-only">Puzzle shape</legend></fieldset></div>
+          </section>
+          <section class="panel" aria-labelledby="s3">
+            <div class="panel-heading"><span class="step" aria-hidden="true">3</span><h2 id="s3">Choose a level</h2></div>
+            <div class="panel-body">
+              <fieldset class="levels" id="levels"><legend class="sr-only">Level</legend></fieldset>
+              <div id="setup-feedback" aria-live="polite"></div>
+              <div class="start-bar">
+                <p id="ready" class="notice ready-line" role="status"></p>
+                <button id="start" type="button" class="primary-button" disabled>Start puzzle <span lang="zh-Hans">开始</span></button>
+                <p class="help">No sign-in needed. Nothing is saved or uploaded. A Word Bank is there if you need help.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="game" class="game-screen" aria-labelledby="game-title" hidden>
+      <h1 id="game-title" class="sr-only">Tarsia Puzzle</h1>
+      <div class="game-bar">
+        <div class="progress-row"><div id="progress" class="progress" role="progressbar" aria-label="Correct matches" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0"><span id="progress-bar"></span></div>
+          <span id="progress-text" class="progress-text" aria-live="polite"></span></div>
+        <div class="game-controls">
+          <button id="bank-btn" type="button" class="tool-button" aria-expanded="false" aria-controls="word-bank">Word Bank</button>
+          <button id="shuffle-btn" type="button" class="tool-button">Shuffle</button>
+          <button id="restart-btn" type="button" class="tool-button">Restart</button>
+          <button id="setup-btn" type="button" class="tool-button">Setup</button>
+        </div>
+      </div>
+      <p id="complete-note" class="complete-note" role="status" hidden></p>
+      <div id="workspace" class="workspace">
+        <div id="board-wrap" class="board-wrap"><svg id="board" class="board" role="group" aria-label="Puzzle board"></svg>
+          <p id="kb-status" class="sr-only" aria-live="polite"></p></div>
+        <section id="tray" class="tray" aria-label="Pieces to place">
+          <p id="tray-count" class="tray-count"></p>
+          <p id="play-hint" class="play-hint">Tap a piece, then tap an empty space. Tap a placed piece to turn it. Hold a placed piece to send it back.</p>
+          <p id="kb-help" class="kb-hint"><b>Keyboard:</b> <span><kbd>Enter</kbd> select</span> <span><kbd>←↑→↓</kbd> choose a space</span> <span><kbd>Enter</kbd> place</span> <span><kbd>R</kbd> turn</span> <span><kbd>Delete</kbd> back to tray</span> <span><kbd>Esc</kbd> cancel</span></p>
+          <div id="tray-list" class="tray-list"></div>
+        </section>
+      </div>
+      <aside id="word-bank" class="word-bank" role="dialog" aria-modal="false" aria-labelledby="bank-title" hidden>
+        <div class="bank-head"><h2 id="bank-title">Word Bank <span lang="zh-Hans">词库</span></h2><button id="bank-close" type="button" class="tool-button">Close</button></div>
+        <p class="help">Use these words to help you. It's fine to look!</p>
+        <ul id="bank-list" class="bank-list"></ul>
+      </aside>
+    </section>
+  </main>
+
+  <section id="complete-panel" class="complete-panel" role="dialog" aria-modal="true" aria-labelledby="cp-title" hidden>
+    <div class="cp-card">
+      <div class="cp-head">
+        <svg class="cp-stars" viewBox="0 0 120 36" aria-hidden="true" focusable="false"><g fill="#ffd85a" stroke="#c99a1d" stroke-width="1.5"><path d="M18 4l4 9 10 1-7.5 6.5 2.5 10L18 25l-9 5.5 2.5-10L4 14l10-1z"/><path d="M60 2l5 11 12 1-9 8 3 12-11-6.5L49 34l3-12-9-8 12-1z"/><path d="M102 4l4 9 10 1-7.5 6.5 2.5 10-9-5.5-9 5.5 2.5-10L86 14l10-1z"/></g></svg>
+        <h2 id="cp-title" tabindex="-1">Well done! <span lang="zh-Hans">太棒了！</span></h2>
+        <p id="cp-summary"></p>
+      </div>
+      <div class="cp-body">
+        <div class="cp-form">
+          <p class="help">Add your name to your learning record if you like. It stays on this device. Nothing is uploaded.</p>
+          <label class="cp-field">First name <span class="field-hint">optional</span><input id="cp-name" maxlength="40" autocomplete="off" autocapitalize="words" spellcheck="false"></label>
+          <label class="cp-field">Class <span class="field-hint">optional</span><input id="cp-class" maxlength="20" autocomplete="off" spellcheck="false"></label>
+          <fieldset class="cp-size"><legend>Record size</legend>
+            <label><input type="radio" name="cp-size" value="A5" checked> A5 <span class="field-hint">standard</span></label>
+            <label><input type="radio" name="cp-size" value="A6"> A6 <span class="field-hint">compact</span></label>
+          </fieldset>
+          <button id="cp-save" type="button" class="primary-button" disabled>Save learning record</button>
+          <p id="cp-status" class="cp-status" role="status"></p>
+          <button id="cp-retry" type="button" class="secondary-button" hidden>Try again</button>
+          <div id="cp-fallback" class="cp-fallback" hidden>
+            <p><strong>To save it to Photos:</strong> press and hold the picture below, then choose <em>Save to Photos</em>.</p>
+            <img id="cp-fallback-img" alt="Your learning record">
+            <p class="help">On a computer you can also <a id="cp-download" href="#">download the picture</a> (it goes to your Downloads, not to Photos).</p>
+          </div>
+          <div class="cp-more">
+            <button id="cp-again" type="button" class="tool-button">Play again</button>
+            <button id="cp-setup" type="button" class="tool-button">Choose new words</button>
+            <button id="cp-close" type="button" class="tool-button">Look at my puzzle</button>
+          </div>
+        </div>
+        <figure class="cp-preview"><img id="cp-preview" alt="Preview of your learning record"><figcaption class="help">Learning record preview</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <dialog id="confirm" class="confirm">
+    <form method="dialog"><p id="confirm-text"></p>
+      <div class="confirm-actions"><button value="cancel" class="secondary-button">Keep playing</button><button id="confirm-ok" value="ok" class="primary-button">OK</button></div></form>
+  </dialog>
+
+  <div class="touch-start" id="touch-start" hidden>
+    <p id="touch-ready"></p>
+    <button id="touch-start-button" type="button" class="primary-button" disabled>Start puzzle <span lang="zh-Hans">开始</span></button>
+  </div>
+
+  <footer class="site-footer"><span>App created by Wei Wang</span><span>The Mandarin Room © 2026</span><span>Tarsia Puzzle v0.1 · Nov 2026</span></footer>
+  <script type="module" src="./bootstrap.mjs"></script>
+</body>
+</html>

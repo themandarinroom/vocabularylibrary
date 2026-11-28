@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tarsia Puzzle · Engine prototype (developer only)</title>
+  <link rel="stylesheet" href="./dev.css">
+</head>
+<body>
+  <header>
+    <strong>Tarsia Puzzle — engine prototype</strong>
+    <span class="note">Developer only · Phase A · not the final design · nothing saved or uploaded</span>
+  </header>
+  <main>
+    <section class="controls" aria-label="Puzzle setup">
+      <fieldset>
+        <legend>Vocabulary</legend>
+        <label><input type="radio" name="source" value="fixtures" checked> Fixture sets (offline)</label>
+        <label><input type="radio" name="source" value="published"> Published Library (read-only)</label>
+        <div id="sets" class="sets"></div>
+        <p id="pool" class="help"></p>
+      </fieldset>
+      <fieldset>
+        <legend>Puzzle</legend>
+        <label>Level <select id="level"><option value="beginner">Beginner</option><option value="master">Master</option></select></label>
+        <label>Mode <select id="mode"></select></label>
+        <label>Shape <select id="shape"></select></label>
+        <label>Starting pieces <select id="start"></select></label>
+        <label>Seed <input id="seed" inputmode="numeric" size="11"></label>
+        <div class="row"><button id="new-seed" type="button">New seed</button><button id="generate" type="button" class="primary">Start puzzle</button></div>
+        <p id="message" class="message" role="status"></p>
+      </fieldset>
+    </section>
+    <section class="play" aria-label="Puzzle">
+      <div class="toolbar">
+        <span id="progress">—</span>
+        <button id="reset" type="button">Reset</button>
+        <button id="bank-toggle" type="button" aria-expanded="false">Word Bank</button>
+        <button id="solve" type="button" title="Developer check only">Show a solution (dev)</button>
+        <label><input type="checkbox" id="debug"> Debug</label>
+      </div>
+      <p class="help">Drag pieces onto the board. Tap a piece to turn it (60° in the tray, 120° on the board). Grey pieces are fixed.</p>
+      <svg id="svg" role="img" aria-label="Tarsia puzzle board and pieces"></svg>
+      <div id="done" class="done" hidden></div>
+      <div id="bank" class="bank" hidden></div>
+      <pre id="debug-out" hidden></pre>
+    </section>
+  </main>
+  <script type="module" src="./dev.mjs"></script>
+</body>
+</html>

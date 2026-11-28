@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Tarsia · Evidence of Learning export proof of concept (developer only)</title>
+  <style>
+    body{font:15px/1.45 -apple-system,"Avenir Next",Arial,sans-serif;margin:0;padding:18px 22px;background:#f6f7f2;color:#0c193b}
+    h1{font-size:22px;margin:0 0 6px} .note{color:#8a5a00} table{border-collapse:collapse;background:#fff;margin:10px 0;font-size:13px}
+    td,th{border:1px solid #dfe4d8;padding:5px 8px;text-align:left;vertical-align:top} .ok{color:#1f7a45;font-weight:700} .bad{color:#b42318;font-weight:700}
+    .out{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px} .out figure{margin:0;background:#fff;border:1px solid #dfe4d8;padding:8px}
+    .out img{width:100%;height:auto;display:block;border:1px solid #eee} figcaption{font-size:13px;margin-top:6px}
+  </style>
+</head>
+<body>
+  <h1>Evidence of Learning export — proof of concept</h1>
+  <p class="note">Developer only. Live published vocabulary (read-only). "Relay" rows use the local developer image relay, which stands in for the proposed Storage CORS policy; production cannot do this today. Nothing is uploaded; sample PNGs are saved to the local outputs folder only.</p>
+  <p id="status">Running…</p>
+  <table id="results"><tr><th>#</th><th>Scenario</th><th>Pictures</th><th>Result</th><th>PNG</th><th>Board text / pictures</th></tr></table>
+  <div id="out" class="out"></div>
+  <script type="module" src="./export-poc.mjs"></script>
+</body>
+</html>
