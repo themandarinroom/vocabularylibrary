@@ -95,3 +95,33 @@ footer.site-footer span{color:inherit}.site-footer span:nth-child(2){text-align:
 .tmr-app-current::before{content:"·";content:"·" / "";margin-right:6px}
 @media (max-width:700px){.tmr-app-current{font-size:13px}}
 @media(pointer:coarse){.tmr-app-row{margin-top:0}}
+/* Vocabulary selector: same layout, colours and spacing as Build the Great Wall (copied, not imported, so the
+   Solo package stays self-contained). Set checkbox = Choose all; word chips can be left out individually. */
+.setup-screen .field-label{display:block;font-weight:750;font-size:14px;margin-bottom:8px}
+.field-hint{font-weight:500;color:var(--muted);margin-left:6px}
+.set-list{max-height:280px;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid #9bb6a9;border-radius:12px;padding:4px 6px}
+.set-list>.help{margin:10px}
+.set-group-title{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 8px 4px}
+.set-option{display:flex;align-items:center;gap:12px;min-height:50px;padding:6px 10px;border-radius:10px;cursor:pointer;font-size:16px;line-height:1.3}
+.set-option:has(input:checked),.set-option.partial{background:#e7f2ea}
+.set-option input{width:24px;height:24px;flex-shrink:0;margin:0;accent-color:var(--deep)}
+.set-option small{margin-left:auto;color:var(--muted);font-size:13px;white-space:nowrap}
+.words-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px}
+.words-heading .field-label{margin:0}
+.set-preview{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px;max-height:210px;overflow:auto;align-items:center;-webkit-overflow-scrolling:touch}
+.setup-screen .word-chip{border:1px solid #c6d7ca;border-radius:12px;background:#f3f8ed;padding:6px 12px;font-size:20px;line-height:1.25;color:var(--ink);min-height:48px;text-align:left}
+.setup-screen .word-chip strong{display:block;font-weight:650}
+.setup-screen .word-chip small{display:block;font-size:12px;color:var(--muted)}
+.setup-screen .word-chip.selected{border-color:var(--deep);background:#e7f2ea}
+.setup-screen .word-chip:not(.selected){background:#fff;border-style:dashed;color:var(--muted)}
+.setup-screen .word-chip:not(.selected) strong{opacity:.55}
+@media(hover:hover) and (pointer:fine){.setup-screen .word-chip:hover{border-color:var(--deep)}}
+
+/* Listening Break: calm, full-page, no sound or animation. */
+.listen-break{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(255,253,248,.97);overscroll-behavior:contain}
+.break-card{max-width:520px;width:100%;text-align:center;background:var(--paper,#fffdf8);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:36px 28px}
+.break-card h2{font-size:30px;margin:0 0 12px;color:var(--ink);outline:none}
+.break-card p{font-size:17px;color:var(--muted);margin:0}
+.break-count{display:flex;flex-direction:column;align-items:center;margin:22px 0 !important}
+.break-count span{font-size:96px;line-height:1;font-weight:800;color:var(--deep);font-variant-numeric:tabular-nums}
+.break-count small{font-size:15px;color:var(--muted);margin-top:6px}
