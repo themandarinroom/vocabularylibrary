@@ -9,6 +9,8 @@ import { createGesture } from './gesture.mjs';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const FONTS = { hanzi: '"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif',
   latin: '"Avenir Next",Avenir,"Segoe UI",Arial,sans-serif' };
+// D3: phone-width screens use a vertically scrolling layout (see styles.css, same breakpoint).
+const PHONE = '(max-width: 600px)';
 const fontFor = kind => kind === 'hanzi' ? FONTS.hanzi : FONTS.latin;
 const ctx = document.createElement('canvas').getContext('2d');
 const measure = (text, px, kind) => { ctx.font = `600 ${px}px ${fontFor(kind)}`; return ctx.measureText(text).width; };
@@ -57,11 +59,18 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
   function resize() {
     // Portrait: give the board only the height its shape needs at full width; the tray gets the rest.
     const ws = $('workspace'), portrait = matchMedia('(orientation: portrait)').matches;
-    if (portrait) {
+    if (matchMedia(PHONE).matches) {
+      // D3 (phones ≤ 600 px wide): the page scrolls, so the board takes the full width and exactly the height its
+      // shape needs; the tray follows below. iPads and phones in landscape (wider than 600 px) never come here.
+      ws.style.gridTemplateRows = '';
+      const width = $('board-wrap').getBoundingClientRect().width, side = (width - 16) / (bounds.maxX - bounds.minX);
+      $('board-wrap').style.height = `${Math.floor(side * (bounds.maxY - bounds.minY) + 16)}px`;
+    } else if (portrait) {
+      $('board-wrap').style.height = '';
       const box = ws.getBoundingClientRect(), sideAtWidth = (box.width - 16) / (bounds.maxX - bounds.minX);
       const boardH = Math.round(sideAtWidth * (bounds.maxY - bounds.minY) + 16), trayMin = 170;
       ws.style.gridTemplateRows = boardH + trayMin + 10 <= box.height ? `${boardH}px minmax(${trayMin}px, 1fr)` : '';
-    } else ws.style.gridTemplateRows = '';
+    } else { ws.style.gridTemplateRows = ''; $('board-wrap').style.height = ''; }
     const wrap = $('board-wrap').getBoundingClientRect(), pad = 8; // D1: tighter inner margin → larger pieces
     const next = Math.floor(Math.min((wrap.width - 2 * pad) / (bounds.maxX - bounds.minX), (wrap.height - 2 * pad) / (bounds.maxY - bounds.minY)));
     if (next !== S && next > 20) {
@@ -139,7 +148,8 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     const h = S * H, gap = 10;
     let scale;
     // D3: measure the room left under the tray header and play hint (the hint can wrap), not a fixed 28 px.
-    if (portrait) { const used = $('tray-list').getBoundingClientRect().top - box.top; scale = Math.min(0.85, (box.height - used - 12) / (h * 1.04)); }
+    if (matchMedia(PHONE).matches) scale = 0.9; // phones: the tray grows downwards (page scrolls), pieces stay large
+    else if (portrait) { const used = $('tray-list').getBoundingClientRect().top - box.top; scale = Math.min(0.85, (box.height - used - 12) / (h * 1.04)); }
     else { const inner = box.width - 24, cols = Math.max(1, Math.floor((inner + gap) / (0.72 * S + gap))); scale = Math.min(0.85, (inner - (cols - 1) * gap) / cols / S); }
     tray.style.setProperty('--piece-w', `${(S * scale).toFixed(1)}px`);
     tray.style.setProperty('--piece-h', `${(h * scale * 1.02).toFixed(1)}px`);

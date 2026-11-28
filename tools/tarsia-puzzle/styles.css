@@ -340,3 +340,16 @@ body.playing .game-screen{height:calc(100dvh - 68px)}
 .piece.pressing .piece-face{stroke:#e09b16;animation:tz-hold .5s linear forwards}
 @keyframes tz-hold{from{stroke-width:1.5}to{stroke-width:9}}
 @media(prefers-reduced-motion:reduce){.piece.pressing .piece-face{animation:none;stroke-width:6}}
+
+/* ---------- D3 (28 Nov): phones ≤ 600 px wide — the page scrolls; board full width, tray below ----------
+   iPads (portrait 768/810 px) and phones in landscape (wider than 600 px) keep the accepted single-screen layout. */
+@media (max-width:600px){
+  body.playing .game-screen{height:auto;min-height:0}
+  body.playing .game-bar{position:sticky;top:0;z-index:20;background:var(--ws-page);padding:6px 0}
+  .workspace{display:flex;flex-direction:column;grid-template-rows:none}
+  .board-wrap,.tray{flex:none}
+  .tray-list{flex-wrap:wrap;overflow:visible;justify-content:center;align-items:flex-start}
+  .tray-item{touch-action:manipulation;flex-shrink:0}
+  /* a swipe that starts on a placed piece scrolls the page; the browser then cancels the press (no turn, no hold) */
+  .board .piece{touch-action:manipulation}
+}

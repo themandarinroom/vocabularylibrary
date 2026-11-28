@@ -135,3 +135,17 @@ test('game uses fitPiece for board and tray and re-fits when the piece size chan
   assert.match(ws, /if \(next !== S && next > 20\) \{\s*S = next;\s*layouts = new Map\(puzzle\.pieces\.map\(p => \[p\.id, fitPiece\(labelsOf\(p\), S, measure\)\]\)\)/);
   assert.doesNotMatch(ws, /layoutPiece\(/);
 });
+test('phone layout (≤ 600 px): page scrolls, board full width, tray below and wrapping; wider screens untouched', () => {
+  const css = read('styles.css'), ws = read('workspace.mjs');
+  const block = css.slice(css.indexOf('@media (max-width:600px){'));
+  assert.ok(block.length > 30, 'phone block present');
+  const phone = block.slice(0, block.indexOf('\n}') + 2);
+  assert.match(phone, /body\.playing \.game-screen\{height:auto;min-height:0\}/);
+  assert.match(phone, /\.workspace\{display:flex;flex-direction:column/);
+  assert.match(phone, /\.tray-list\{flex-wrap:wrap;overflow:visible/);
+  assert.match(phone, /\.board \.piece\{touch-action:manipulation\}/, 'a swipe on a placed piece scrolls the page');
+  assert.match(css, /\.piece\{cursor:grab;touch-action:none\}/, 'iPad/desktop rule kept');
+  assert.match(ws, /const PHONE = '\(max-width: 600px\)';/);
+  assert.match(ws, /if \(matchMedia\(PHONE\)\.matches\) scale = 0\.9;/);
+  assert.match(ws, /workspace\.addEventListener\('pointercancel', cancelPress, on\);/, 'a scroll cancels a press: no turn, no hold');
+});
