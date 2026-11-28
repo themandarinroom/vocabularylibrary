@@ -2,7 +2,7 @@
 // (D3, 27 Nov 2026: tap only — no dragging). The engine state is the only source of truth; the board and tray are redrawn from it after every action.
 import { rotatePiece, placePiece, removePiece, resetState, edgeStatuses, cellCorners, cellCentroid, cellEdge,
   createRandom, wordBank, tarsiaCompletionRecord, H } from './engine/index.mjs';
-import { layoutPiece, placeLabel } from './label-layout.mjs';
+import { fitPiece, placeLabel } from './label-layout.mjs';
 import { progressOf, shuffleTray, hasProgress, puzzleInfo, tapPiece, tapSlot, boardTapAction, LONG_PRESS_MS, slotNeighbour, pieceDescription, slotDescription } from './workspace-model.mjs';
 import { createGesture } from './gesture.mjs';
 
@@ -66,7 +66,7 @@ export async function openWorkspace({ puzzle, template, sets, onExit, onComplete
     const next = Math.floor(Math.min((wrap.width - 2 * pad) / (bounds.maxX - bounds.minX), (wrap.height - 2 * pad) / (bounds.maxY - bounds.minY)));
     if (next !== S && next > 20) {
       S = next;
-      layouts = new Map(puzzle.pieces.map(p => [p.id, layoutPiece(labelsOf(p), S, measure)]));
+      layouts = new Map(puzzle.pieces.map(p => [p.id, fitPiece(labelsOf(p), S, measure)])); // re-fitted whenever S changes (resize, rotation)
     }
     origin = { x: (wrap.width - (bounds.maxX - bounds.minX) * S) / 2 - bounds.minX * S, y: (wrap.height - (bounds.maxY - bounds.minY) * S) / 2 - bounds.minY * S };
     $('board').setAttribute('viewBox', `0 0 ${wrap.width} ${wrap.height}`);

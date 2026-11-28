@@ -106,3 +106,32 @@ test('record card: Level under Puzzle, Time taken under Matches; long set names 
     if (sets.length === 1) assert.ok(res.fit >= 0.9, 'ordinary records stay (almost) full size; real fonts are checked on browser exports');
   }
 });
+
+// ---------- Smartphone text fitting (28 Nov 2026) ----------
+import { layoutPiece as rawLayout, fitPiece, SCREEN_FLOORS, estimateWidth, LAYOUT as BASE } from '../tools/tarsia-puzzle/label-layout.mjs';
+const L = (kind, text) => ({ kind, text });
+test('fitPiece: identical to the approved layout wherever it already fits (every iPad and desktop size)', () => {
+  const words = { hanzi: ['澳大利亚', '新西兰', '中国'], pinyin: ['ao da li ya', 'xin xi lan', 'zhong guo'], english: ['Australia', 'New Zealand', 'China'] };
+  for (const S of [209, 214, 225, 231, 243, 256, 314, 346]) for (const mode of Object.values(MODES)) {
+    const labels = mode.sides.concat(mode.sides[0]).slice(0, 3).map((k, i) => k === 'picture' ? { kind: 'picture', aspect: 1.5 } : L(k, words[k][i]));
+    const a = rawLayout(labels, S, estimateWidth), b = fitPiece(labels, S, estimateWidth);
+    assert.equal(b.floorStep, 0, `${S} ${mode.id}`);
+    assert.deepEqual(b.map(o => o && { ...o }), a.map(o => o && { ...o }));
+  }
+  assert.deepEqual(SCREEN_FLOORS[0], BASE.minFontPx, 'first step = approved floors');
+});
+test('fitPiece: the reported phone pieces no longer overlap at iPhone 13 Pro Max piece size; text never cut; readable floor', () => {
+  for (const labels of [[L('hanzi', '新南威尔士'), L('hanzi', '昆士兰'), null], [L('hanzi', '肩膀'), L('pinyin', 'xin nan wei er shi'), L('pinyin', 'jian bang')]]) {
+    const before = rawLayout(labels, 132, estimateWidth), after = fitPiece(labels, 132, estimateWidth);
+    assert.ok(before.some(o => o?.overflow), 'overlapped before');
+    assert.ok(!after.some(o => o?.overflow), 'fits after');
+    after.forEach((o, i) => { if (!o) return; assert.equal(o.lines.join(o.kind === 'hanzi' ? '' : ' '), labels[i].text, 'never truncated');
+      assert.ok(o.fontPx >= SCREEN_FLOORS.at(-1)[o.kind] - 1e-9, 'readable floor'); });
+  }
+  assert.deepEqual(SCREEN_FLOORS.at(-1), { hanzi: 12, pinyin: 11, english: 11 });
+});
+test('game uses fitPiece for board and tray and re-fits when the piece size changes', () => {
+  const ws = fs.readFileSync(new URL('../tools/tarsia-puzzle/workspace.mjs', import.meta.url), 'utf8');
+  assert.match(ws, /if \(next !== S && next > 20\) \{\s*S = next;\s*layouts = new Map\(puzzle\.pieces\.map\(p => \[p\.id, fitPiece\(labelsOf\(p\), S, measure\)\]\)\)/);
+  assert.doesNotMatch(ws, /layoutPiece\(/);
+});

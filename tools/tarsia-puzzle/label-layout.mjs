@@ -126,6 +126,30 @@ export function layoutPiece(labels, side, measure, layout = LAYOUT) {
   }
   throw new Error('Label layout did not settle.');
 }
+// D3 (smartphones): like the learning record's PRINT_FLOORS, a piece that cannot fit its labels at the approved
+// screen floors tries slightly smaller floors, one step at a time, and keeps the first that fits with no label
+// outside the piece and no two labels touching. Pieces that already fit (every iPad and desktop size) are laid
+// out exactly as before; within a relaxed piece, labels that fit stay as large as they can. Nothing is cut or
+// abbreviated: the last step is still readable (12 px Hanzi, 11 px Pinyin/English).
+export const SCREEN_FLOORS = Object.freeze([
+  Object.freeze({ hanzi: 18, pinyin: 14, english: 14 }),   // approved floors (unchanged)
+  Object.freeze({ hanzi: 16, pinyin: 13, english: 13 }),
+  Object.freeze({ hanzi: 14, pinyin: 12, english: 12 }),
+  Object.freeze({ hanzi: 13, pinyin: 11.5, english: 11.5 }),
+  Object.freeze({ hanzi: 12, pinyin: 11, english: 11 })
+]);
+export function fitPiece(labels, side, measure, layout = LAYOUT) {
+  let out = null;
+  for (let step = 0; step < SCREEN_FLOORS.length; step++) {
+    // The last two steps also use tighter (but still non-zero) spacing between labels and from the edges.
+    const tight = step >= SCREEN_FLOORS.length - 2 ? { edgeGap: 0.036, margin: 0.02, labelGap: 0.012 } : {};
+    out = layoutPiece(labels, side, measure, step === 0 ? layout : { ...layout, ...tight, minFontPx: SCREEN_FLOORS[step] });
+    if (!out.some(o => o?.overflow)) { out.floorStep = step; return out; }
+  }
+  out.floorStep = SCREEN_FLOORS.length - 1; // still overflowing at the smallest readable size: reported by tests/audit
+  return out;
+}
+
 function finish(lists, idx, shapes, overflow) {
   return lists.map((list, i) => list ? { ...list[idx[i]], depth: shapes[i].depth, overflow: Array.isArray(overflow) && overflow.includes(i) } : null);
 }
